@@ -1,0 +1,39 @@
+{
+  "name": "foresight-cli",
+  "version": "0.1.0",
+  "description": "Proactive deprecation intelligence CLI for runtime warnings and dependency ecosystems",
+  "type": "module",
+  "bin": {
+    "foresight": "src/cli.js"
+  },
+  "scripts": {
+    "start": "node ./src/cli.js",
+    "test": "node --test",
+    "scan:sample": "node ./src/cli.js scan --cmd \"node ./test/fixtures/emit-warning.fixture.js\"",
+    "report": "node ./src/cli.js report"
+  },
+  "engines": {
+    "node": ">=18.18"
+  },
+  "keywords": [
+    "cli",
+    "deprecation",
+    "runtime",
+    "tracking",
+    "sqlite",
+    "slack",
+    "email"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "nodemailer": "^6.10.0",
+    "sql.js": "^1.14.1"
+  },
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "test": "test"
+  },
+  "devDependencies": {},
+  "author": ""
+}
