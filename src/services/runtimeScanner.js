@@ -15,7 +15,8 @@ export async function scanCommand({
   command,
   source = "node",
   onFinding,
-  mirrorOutput = true
+  mirrorOutput = true,
+  onLine
 }) {
   return new Promise((resolve, reject) => {
     const tempDir = join(tmpdir(), `foresight-${Date.now()}-${Math.random().toString(16).slice(2)}`);
@@ -36,6 +37,9 @@ export async function scanCommand({
       for (const line of lines) {
         if (mirrorOutput) {
           process.stdout.write(`${line}\n`);
+        }
+        if (onLine) {
+          await onLine(line, "combined");
         }
         const finding = parseRuntimeDeprecation(line, {
           source,
@@ -90,6 +94,9 @@ export async function scanCommand({
           if (mirrorOutput) {
             process.stdout.write(`${buffer}\n`);
           }
+          if (onLine) {
+            await onLine(buffer, "combined");
+          }
           const finding = parseRuntimeDeprecation(buffer, {
             source,
             stream: "combined",
@@ -117,7 +124,7 @@ export async function scanCommand({
   });
 }
 
-export async function scanFile({ filePath, follow = false, onFinding }) {
+export async function scanFile({ filePath, follow = false, onFinding, onLine }) {
   let matches = 0;
   let lastSize = 0;
   let buffer = "";
@@ -128,6 +135,9 @@ export async function scanFile({ filePath, follow = false, onFinding }) {
     buffer = lines.pop() || "";
 
     for (const line of lines) {
+      if (onLine) {
+        await onLine(line, "log");
+      }
       const finding = parseRuntimeDeprecation(line, {
         source: "log",
         file: filePath
@@ -146,6 +156,9 @@ export async function scanFile({ filePath, follow = false, onFinding }) {
 
   if (!follow) {
     if (buffer.trim()) {
+      if (onLine) {
+        await onLine(buffer, "log");
+      }
       const finding = parseRuntimeDeprecation(buffer, {
         source: "log",
         file: filePath
@@ -186,6 +199,9 @@ export async function scanFile({ filePath, follow = false, onFinding }) {
       await pendingRead;
 
       if (buffer.trim()) {
+        if (onLine) {
+          await onLine(buffer, "log");
+        }
         const finding = parseRuntimeDeprecation(buffer, {
           source: "log",
           file: filePath

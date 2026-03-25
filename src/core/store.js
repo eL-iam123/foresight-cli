@@ -292,6 +292,196 @@ export class DeprecationStore {
 
     return this.db.all(query, params);
   }
+
+  upsertSubscription(subscription) {
+    const now = subscription.updatedAt || new Date().toISOString();
+    const existing = this.db.get(
+      `
+        SELECT *
+        FROM subscriptions
+        WHERE project = ? AND target_type = ? AND target_name = ?
+      `,
+      [subscription.project, subscription.targetType, subscription.targetName]
+    );
+
+    if (!existing) {
+      const id = randomUUID();
+      this.db.run(
+        `
+          INSERT INTO subscriptions (
+            id,
+            project,
+            target_type,
+            target_name,
+            current_version,
+            latest_version,
+            notify_email,
+            active,
+            created_at,
+            updated_at,
+            last_checked_at,
+            last_alerted_at,
+            metadata_json
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `,
+        [
+          id,
+          subscription.project,
+          subscription.targetType,
+          subscription.targetName,
+          subscription.currentVersion || null,
+          subscription.latestVersion || null,
+          subscription.notifyEmail || null,
+          subscription.active === false ? 0 : 1,
+          now,
+          now,
+          subscription.lastCheckedAt || null,
+          subscription.lastAlertedAt || null,
+          serializeJson(subscription.metadata || {})
+        ]
+      );
+
+      return {
+        isNew: true,
+        subscription: {
+          id,
+          project: subscription.project,
+          targetType: subscription.targetType,
+          targetName: subscription.targetName,
+          currentVersion: subscription.currentVersion || null,
+          latestVersion: subscription.latestVersion || null,
+          notifyEmail: subscription.notifyEmail || null,
+          active: subscription.active === false ? false : true,
+          createdAt: now,
+          updatedAt: now,
+          lastCheckedAt: subscription.lastCheckedAt || null,
+          lastAlertedAt: subscription.lastAlertedAt || null,
+          metadata: subscription.metadata || {}
+        }
+      };
+    }
+
+    this.db.run(
+      `
+        UPDATE subscriptions
+        SET
+          current_version = COALESCE(?, current_version),
+          latest_version = COALESCE(?, latest_version),
+          notify_email = COALESCE(?, notify_email),
+          active = ?,
+          updated_at = ?,
+          metadata_json = ?
+        WHERE id = ?
+      `,
+      [
+        subscription.currentVersion || null,
+        subscription.latestVersion || null,
+        subscription.notifyEmail || null,
+        subscription.active === false ? 0 : 1,
+        now,
+        serializeJson(
+          subscription.metadata ||
+            (existing.metadata_json ? JSON.parse(existing.metadata_json) : {})
+        ),
+        existing.id
+      ]
+    );
+
+    return {
+      isNew: false,
+      subscription: mapSubscriptionRow(
+        this.db.get(`SELECT * FROM subscriptions WHERE id = ?`, [existing.id])
+      )
+    };
+  }
+
+  listSubscriptions(filters = {}) {
+    const clauses = [];
+    const params = [];
+
+    if (filters.project) {
+      clauses.push("project = ?");
+      params.push(filters.project);
+    }
+
+    if (filters.targetType) {
+      clauses.push("target_type = ?");
+      params.push(filters.targetType);
+    }
+
+    if (filters.active !== undefined) {
+      clauses.push("active = ?");
+      params.push(filters.active ? 1 : 0);
+    }
+
+    const whereClause = clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "";
+
+    const rows = this.db.all(
+      `
+        SELECT *
+        FROM subscriptions
+        ${whereClause}
+        ORDER BY project ASC, target_name ASC
+      `,
+      params
+    );
+
+    return rows.map((row) => mapSubscriptionRow(row));
+  }
+
+  listActiveSubscriptions(project) {
+    return this.listSubscriptions({
+      project,
+      active: true
+    });
+  }
+
+  recordSubscriptionCheck(check) {
+    const checkedAt = check.checkedAt || new Date().toISOString();
+    this.db.run(
+      `
+        INSERT INTO subscription_checks (
+          id,
+          subscription_id,
+          checked_at,
+          status,
+          latest_version,
+          deprecation_message,
+          change_summary,
+          payload_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `,
+      [
+        randomUUID(),
+        check.subscriptionId,
+        checkedAt,
+        check.status,
+        check.latestVersion || null,
+        check.deprecationMessage || null,
+        check.changeSummary || null,
+        serializeJson(check.payload || {})
+      ]
+    );
+
+    this.db.run(
+      `
+        UPDATE subscriptions
+        SET
+          latest_version = COALESCE(?, latest_version),
+          last_checked_at = ?,
+          updated_at = ?,
+          last_alerted_at = COALESCE(?, last_alerted_at)
+        WHERE id = ?
+      `,
+      [
+        check.latestVersion || null,
+        checkedAt,
+        checkedAt,
+        check.alertedAt || null,
+        check.subscriptionId
+      ]
+    );
+  }
 }
 
 function createFingerprint(finding) {
@@ -329,6 +519,24 @@ function mapDeprecationRow(row) {
     lastSeenAt: row.last_seen_at,
     occurrenceCount: row.occurrence_count,
     status: row.status,
+    metadata: row.metadata_json ? JSON.parse(row.metadata_json) : {}
+  };
+}
+
+function mapSubscriptionRow(row) {
+  return {
+    id: row.id,
+    project: row.project,
+    targetType: row.target_type,
+    targetName: row.target_name,
+    currentVersion: row.current_version,
+    latestVersion: row.latest_version,
+    notifyEmail: row.notify_email,
+    active: Number(row.active) === 1,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    lastCheckedAt: row.last_checked_at,
+    lastAlertedAt: row.last_alerted_at,
     metadata: row.metadata_json ? JSON.parse(row.metadata_json) : {}
   };
 }

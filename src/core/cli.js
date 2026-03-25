@@ -2,12 +2,15 @@ import { existsSync, readFileSync } from "node:fs";
 import { basename, resolve } from "node:path";
 
 const BOOLEAN_FLAGS = new Set([
+  "all",
   "follow",
+  "interactive",
   "json",
   "notify",
   "quiet",
   "registry",
-  "includeDev"
+  "includeDev",
+  "watch"
 ]);
 
 export function parseArgv(argv) {
@@ -65,23 +68,24 @@ export function printUsage() {
   const lines = [
     "",
     "Foresight CLI",
-    "Track deprecations before they turn into breakage.",
+    "Subscribe once and get notified later about deprecations and new versions.",
     "",
-    "Start here:",
-    "  foresight demo",
-    "  foresight deps",
+    "Recommended:",
+    "  foresight",
+    "",
+    "This opens the guided interactive menu.",
+    "",
+    "Quick commands:",
+    "  foresight subscribe",
+    "  foresight monitor --notify",
+    "  foresight subscriptions",
     "  foresight report",
+    "  foresight scan --cmd \"npm test\" --interactive",
     "",
-    "Commands:",
-    "  foresight demo [--project my-app] [--json]",
-    "  foresight scan --cmd \"npm test\" [--project my-app] [--db ./.foresight/foresight.db]",
-    "  foresight scan --file ./logs/app.log [--follow] [--project my-app]",
-    "  foresight deps [--package ./package.json] [--project my-app] [--notify]",
-    "  foresight report [--project my-app] [--severity medium] [--type runtime] [--json]",
-    "",
-    "Tips:",
-    "  If you skip --project, Foresight uses your package.json name or folder name.",
-    "  Use `foresight demo` after install to make sure everything works.",
+    "Power user commands:",
+    "  foresight interactive",
+    "  foresight subscribe --package request --version 2.88.2 --email you@example.com",
+    "  foresight watch --interval 2",
     "",
     "Alert env vars:",
     "  FORESIGHT_SLACK_WEBHOOK_URL",

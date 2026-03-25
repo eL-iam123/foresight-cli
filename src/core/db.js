@@ -61,6 +61,41 @@ export async function openDatabase(inputPath) {
       payload_json TEXT,
       FOREIGN KEY (deprecation_id) REFERENCES deprecations(id) ON DELETE CASCADE
     );
+
+    CREATE TABLE IF NOT EXISTS subscriptions (
+      id TEXT PRIMARY KEY,
+      project TEXT NOT NULL,
+      target_type TEXT NOT NULL,
+      target_name TEXT NOT NULL,
+      current_version TEXT,
+      latest_version TEXT,
+      notify_email TEXT,
+      active INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      last_checked_at TEXT,
+      last_alerted_at TEXT,
+      metadata_json TEXT,
+      UNIQUE(project, target_type, target_name)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_subscriptions_project
+      ON subscriptions(project, target_type, active, updated_at);
+
+    CREATE TABLE IF NOT EXISTS subscription_checks (
+      id TEXT PRIMARY KEY,
+      subscription_id TEXT NOT NULL,
+      checked_at TEXT NOT NULL,
+      status TEXT NOT NULL,
+      latest_version TEXT,
+      deprecation_message TEXT,
+      change_summary TEXT,
+      payload_json TEXT,
+      FOREIGN KEY (subscription_id) REFERENCES subscriptions(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_subscription_checks_subscription
+      ON subscription_checks(subscription_id, checked_at);
   `);
 
   client.persist();

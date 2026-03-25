@@ -1,19 +1,36 @@
 #!/usr/bin/env node
 import { runDepsCommand } from "./commands/deps.js";
 import { runDemoCommand } from "./commands/demo.js";
+import { runInteractiveCommand } from "./commands/interactive.js";
+import { runMonitorCommand } from "./commands/monitor.js";
 import { runReportCommand } from "./commands/report.js";
 import { runScanCommand } from "./commands/scan.js";
+import { runSubscribeCommand } from "./commands/subscribe.js";
+import { runSubscriptionsCommand } from "./commands/subscriptions.js";
 import { parseArgv, printUsage } from "./core/cli.js";
 
 async function main() {
   const { command, options } = parseArgv(process.argv.slice(2));
 
-  if (!command || command === "help" || command === "--help") {
+  if (!command) {
+    if (process.stdout.isTTY && process.stdin.isTTY) {
+      await runInteractiveCommand();
+      return;
+    }
+
+    printUsage();
+    return;
+  }
+
+  if (command === "help" || command === "--help") {
     printUsage();
     return;
   }
 
   switch (command) {
+    case "interactive":
+      await runInteractiveCommand();
+      return;
     case "demo":
       await runDemoCommand(options);
       return;
@@ -23,8 +40,23 @@ async function main() {
     case "deps":
       await runDepsCommand(options);
       return;
+    case "subscribe":
+      await runSubscribeCommand(options);
+      return;
+    case "subscriptions":
+      await runSubscriptionsCommand(options);
+      return;
+    case "monitor":
+      await runMonitorCommand(options);
+      return;
     case "report":
       await runReportCommand(options);
+      return;
+    case "watch":
+      await runReportCommand({
+        ...options,
+        watch: true
+      });
       return;
     default:
       throw new Error(`Unknown command: ${command}`);

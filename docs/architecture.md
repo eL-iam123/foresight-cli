@@ -5,27 +5,35 @@
 ```text
 CLI
  ↓
-Runtime Scanner / Dependency Analyzer
+Subscription Registry / Runtime Scanner / Dependency Analyzer
  ↓
-Rule-based Parser Layer
+Registry Polling + Rule-based Parser Layer
  ↓
 Normalization + Severity Scoring
  ↓
 SQLite Store
  ↓
-Reporting + Slack/Email Alerts
+Reporting + Live Terminal UI + Slack/Email Alerts
 ```
+
+## Subscription path
+
+1. `subscribe` saves a watchlist of packages from `package.json` or manual entries.
+2. `monitor` polls registry metadata for those subscriptions.
+3. Version changes or deprecation notices are normalized into tracked findings.
+4. New findings are persisted immediately.
+5. Slack and email alerts are sent when configured.
 
 ## Runtime path
 
 1. `scan --cmd` runs a child process and captures its combined output for deprecation parsing.
 2. `scan --file` reads a log file and can keep following appended content in real time.
-3. Parsed deprecations are normalized and persisted immediately.
-4. New or severe records can trigger Slack and email notifications.
+3. `scan --interactive` renders a live dashboard from the same stream while records are being captured.
+4. Parsed runtime deprecations are normalized and persisted immediately.
 
 ## Data lifecycle
 
-- A normalized deprecation record is keyed by a fingerprint.
+- A normalized finding is keyed by a fingerprint.
 - First sighting inserts a durable record.
 - Subsequent sightings append an event and increment occurrence count.
 - Reports summarize current open records and recent history.

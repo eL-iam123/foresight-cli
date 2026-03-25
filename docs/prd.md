@@ -6,19 +6,19 @@ Foresight CLI
 
 ## Overview
 
-Foresight CLI is an open-source developer tool that detects deprecation warnings during runtime and dependency analysis, stores them as durable records, tracks them over time, and helps developers act on them before they become breaking changes.
+Foresight CLI is an open-source developer monitoring tool that lets users subscribe once to packages or projects, polls dependency ecosystems for future-breaking changes, stores durable records over time, and notifies users when deprecations or newer versions appear.
 
 ## Problem Statement
 
-Deprecation warnings are usually transient, unowned, and disconnected from delivery workflows. Teams notice them late, lose historical context, and struggle to prioritize which warnings are actually risky.
+Developers rarely remember to manually check whether libraries are being deprecated or whether a newer version is available. Important upgrade risks often surface too late, after release notes, registry notices, or ecosystem changes have already moved on.
 
 ## Goals
 
-- Capture runtime and log-based deprecations in real time.
-- Normalize, persist, and query deprecations over time.
+- Enable setup-once monitoring instead of manual repeated checks.
 - Detect deprecated dependencies in Node.js projects.
+- Detect newer versions and notify users when a watchlist changes.
+- Normalize, persist, and query findings over time.
 - Alert teams through Slack and email with minimal operational overhead.
-- Support CI/CD gating for medium- and high-severity risks.
 
 ## Non-Goals
 
@@ -37,27 +37,27 @@ Deprecation warnings are usually transient, unowned, and disconnected from deliv
 
 ## Functional Requirements
 
+### Subscription Monitor
+
+- Save watchlists from `package.json` or manual package entries.
+- Poll the internet for deprecation notices and newer versions.
+- Notify users when something changes, without requiring them to remember to scan manually.
+
 ### Runtime Scanner
 
 - Capture deprecation output from `stdout`, `stderr`, and log files.
 - Support live command execution and log following.
 - Parse Node.js deprecation warnings into normalized records.
 
-### Dependency Analyzer
-
-- Inspect `package.json` dependencies and dev dependencies.
-- Detect deprecated packages from installed manifests when available.
-- Fall back to npm registry metadata where needed.
-
 ### Tracking and Persistence
 
-- Persist deprecation records in SQLite.
+- Persist findings in SQLite.
 - Track first seen, last seen, occurrence count, and source metadata.
 - Support filtering by project, severity, type, and time window.
 
 ### Alerts
 
-- Send Slack webhook alerts for new or regressing deprecations.
+- Send Slack webhook alerts for new or regressing findings.
 - Send SMTP email alerts for the same events.
 - Support thresholding by severity and alert mode.
 
@@ -70,23 +70,22 @@ Deprecation warnings are usually transient, unowned, and disconnected from deliv
 ## Non-Functional Requirements
 
 - Linux-first operation
-- Low overhead during runtime scans
 - Fault-tolerant parsing
 - Extensible parser architecture
 - Open-source-friendly contribution flow and documentation
 
 ## MVP Scope
 
+- npm package subscription monitor
 - Node.js runtime parser
-- Direct dependency analyzer
 - SQLite storage
-- CLI commands: `demo`, `scan`, `deps`, `report`
+- CLI commands: `demo`, `subscribe`, `subscriptions`, `monitor`, `scan`, `deps`, `report`
 - Slack and email alert delivery
 
 ## Future Scope
 
 - Time-to-break prediction
 - Guided migration suggestions
+- Hosted scheduler and managed notifications
 - Monorepo-aware package ownership
 - Dashboard and team workflows
-- CI/CD policy packs and GitHub App integration

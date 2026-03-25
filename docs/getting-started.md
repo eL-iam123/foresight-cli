@@ -6,26 +6,51 @@
 npm install -g foresight-cli
 ```
 
-## Run the demo first
-
-If you are brand new to the tool, start here:
+## Start with the guided menu
 
 ```bash
-foresight demo
+foresight
 ```
 
-That command runs a built-in sample deprecation and stores it locally so you can see the full workflow.
+This is the easiest way to use the tool. It walks you through subscribe, monitor, report, and scan flows.
 
-## Scan your own project
+## Subscribe once
+
+The main workflow starts here:
 
 ```bash
-foresight scan --cmd "npm test"
+foresight subscribe
 ```
 
-## Check dependencies
+This reads `package.json` and saves the current dependency set as a watchlist.
+
+## Run the monitor later
 
 ```bash
-foresight deps
+foresight monitor
+```
+
+This checks the internet for:
+
+- deprecation notices
+- newer package versions
+
+## Set up email notifications
+
+```bash
+export FORESIGHT_EMAIL_TO="you@example.com"
+export FORESIGHT_EMAIL_FROM="foresight@example.com"
+export FORESIGHT_SMTP_HOST="smtp.example.com"
+export FORESIGHT_SMTP_PORT="587"
+export FORESIGHT_SMTP_USER="smtp-user"
+export FORESIGHT_SMTP_PASS="smtp-pass"
+foresight monitor --notify
+```
+
+## Schedule it and forget it
+
+```bash
+0 9 * * * cd /path/to/project && foresight monitor --notify
 ```
 
 ## View the report
@@ -34,12 +59,26 @@ foresight deps
 foresight report --history-days 14
 ```
 
-## Use a custom project name
-
-Foresight uses your `package.json` name automatically. You can override it:
+## Keep a live report open
 
 ```bash
-foresight scan --cmd "npm test" --project my-api
+foresight watch --interval 2
+```
+
+This is useful in a second terminal while another monitor or scan is running.
+
+## Subscribe a single package
+
+```bash
+foresight subscribe --package request --version 2.88.2 --email you@example.com
+```
+
+## Manual runtime scans still exist
+
+If you also want to capture deprecations from actual command output:
+
+```bash
+foresight scan --cmd "npm test" --interactive
 ```
 
 ## Enable Slack alerts
@@ -48,17 +87,13 @@ foresight scan --cmd "npm test" --project my-api
 export FORESIGHT_SLACK_WEBHOOK_URL="https://hooks.slack.com/services/..."
 export FORESIGHT_ALERT_THRESHOLD="medium"
 export FORESIGHT_ALERT_MODE="new"
-foresight scan --cmd "npm test" --notify
+foresight monitor --notify
 ```
 
-## Enable email alerts
+## Run the demo first
+
+If you want a quick local example before subscribing a real project:
 
 ```bash
-export FORESIGHT_EMAIL_TO="team@example.com"
-export FORESIGHT_EMAIL_FROM="foresight@example.com"
-export FORESIGHT_SMTP_HOST="smtp.example.com"
-export FORESIGHT_SMTP_PORT="587"
-export FORESIGHT_SMTP_USER="smtp-user"
-export FORESIGHT_SMTP_PASS="smtp-pass"
-foresight deps --notify
+foresight demo
 ```

@@ -7,18 +7,26 @@ export function createAlertDispatcher(options = {}) {
 
   return {
     enabled: Boolean(config.slackWebhookUrl || config.smtp.host),
-    async notifyFinding({ deprecation, isNew }) {
-      if (!shouldSendAlert(config, deprecation.severity, isNew)) {
+    async notifyFinding({ deprecation, isNew, emailTo }) {
+      const runtimeConfig = {
+        ...config,
+        email: {
+          ...config.email,
+          to: emailTo ? splitList(emailTo) : config.email.to
+        }
+      };
+
+      if (!shouldSendAlert(runtimeConfig, deprecation.severity, isNew)) {
         return [];
       }
 
       const deliveries = [];
-      if (config.slackWebhookUrl) {
-        deliveries.push(sendSlackAlert(config, deprecation, isNew));
+      if (runtimeConfig.slackWebhookUrl) {
+        deliveries.push(sendSlackAlert(runtimeConfig, deprecation, isNew));
       }
 
-      if (config.smtp.host && config.email.to.length > 0) {
-        deliveries.push(sendEmailAlert(config, deprecation, isNew));
+      if (runtimeConfig.smtp.host && runtimeConfig.email.to.length > 0) {
+        deliveries.push(sendEmailAlert(runtimeConfig, deprecation, isNew));
       }
 
       return Promise.all(deliveries);

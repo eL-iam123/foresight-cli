@@ -5,6 +5,7 @@ import {
   resolveProjectName,
   toBoolean
 } from "../core/cli.js";
+import { createLiveRenderer, renderScanDashboard } from "../core/live-ui.js";
 import { formatTable, formatTimestamp, printJson, truncate } from "../core/output.js";
 import { meetsSeverityThreshold } from "../core/severity.js";
 import { createAlertDispatcher } from "../services/alertDispatcher.js";
@@ -22,9 +23,31 @@ export async function runScanCommand(options) {
   const alerts = createAlertDispatcher(options);
   const project = resolveProjectName(options);
   const notify = toBoolean(options.notify, alerts.enabled);
-  const quiet = toBoolean(options.quiet, toBoolean(options.json, false));
+  const interactive =
+    toBoolean(options.interactive, false) &&
+    !toBoolean(options.json, false) &&
+    Boolean(process.stdout.isTTY);
+  const quiet = toBoolean(options.quiet, interactive || toBoolean(options.json, false));
   const captured = [];
+  const recentLines = [];
+  const startedAt = new Date().toISOString();
+  let completedAt = null;
   let matchingSeverityCount = 0;
+  const liveRenderer = createLiveRenderer({
+    enabled: interactive,
+    render: () =>
+      renderScanDashboard({
+        project,
+        input: options.cmd || options.file,
+        source: options.cmd ? "command" : "file",
+        follow: toBoolean(options.follow, false),
+        startedAt,
+        completedAt,
+        captured,
+        recentLines,
+        status: completedAt ? "completed" : "running"
+      })
+  });
 
   const persistFinding = async (finding) => {
     const result = store.recordFinding({
@@ -60,19 +83,43 @@ export async function runScanCommand(options) {
         )}\n`
       );
     }
+
+    liveRenderer.requestRender();
   };
+
+  const recordLine = async (line) => {
+    if (!interactive) {
+      return;
+    }
+
+    recentLines.push(line);
+    if (recentLines.length > 8) {
+      recentLines.shift();
+    }
+
+    liveRenderer.requestRender();
+  };
+
+  if (interactive) {
+    liveRenderer.renderNow();
+  }
 
   const scanResult = options.cmd
     ? await scanCommand({
         command: options.cmd,
         onFinding: persistFinding,
-        mirrorOutput: !toBoolean(options.json, false)
+        mirrorOutput: !interactive && !toBoolean(options.json, false),
+        onLine: recordLine
       })
     : await scanFile({
         filePath: options.file,
         follow: toBoolean(options.follow, false),
-        onFinding: persistFinding
+        onFinding: persistFinding,
+        onLine: recordLine
       });
+
+  completedAt = new Date().toISOString();
+  liveRenderer.stop({ finalRender: interactive });
 
   const failOn = options.failOn || null;
   if (failOn) {
@@ -94,6 +141,9 @@ export async function runScanCommand(options) {
   if (toBoolean(options.json, false)) {
     printJson(output);
   } else {
+    if (interactive) {
+      process.stdout.write("\n");
+    }
     process.stdout.write(
       `Project: ${project}\nScanned ${options.cmd ? "command" : "file"}: ${options.cmd || options.file}\n\n`
     );

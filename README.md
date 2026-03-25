@@ -1,13 +1,14 @@
 # Foresight CLI
 
-Foresight CLI is an open-source command-line tool that helps developers spot deprecation warnings early, save them locally, and review them later in one place.
+Foresight CLI is an open-source monitoring tool for developers who want to set up dependency watchlists once and get notified later when something is deprecated or when a newer version becomes available.
 
 It is built to be beginner-friendly:
 
-- simple commands
-- copy-paste examples
-- a built-in `demo` command
-- local SQLite storage so you do not need extra infrastructure
+- run `foresight` and pick from a menu
+- subscribe once
+- run checks on a schedule
+- get email or Slack alerts
+- keep local history in SQLite
 
 ## Install
 
@@ -15,65 +16,100 @@ It is built to be beginner-friendly:
 npm install -g foresight-cli
 ```
 
-After install, the command is:
+After install, start with:
 
 ```bash
 foresight
 ```
 
-## First 60 seconds
+That opens the guided interactive menu.
 
-1. Run the built-in example:
+## The main workflow
+
+Subscribe the current project from the menu, or directly:
 
 ```bash
-foresight demo
+foresight subscribe
 ```
 
-2. Check the saved report:
+Run a monitor check:
+
+```bash
+foresight monitor
+```
+
+Review what Foresight has tracked:
 
 ```bash
 foresight report
 ```
 
-3. Scan your own project dependencies:
-
-```bash
-foresight deps
-```
-
 ## Common commands
 
-Scan a command and track runtime warnings:
+Open the guided menu:
 
 ```bash
-foresight scan --cmd "npm test"
+foresight
 ```
 
-Scan a log file in real time:
+Subscribe all packages from `package.json`:
 
 ```bash
-foresight scan --file ./logs/app.log --follow
+foresight subscribe
 ```
 
-Show tracked warnings:
+Subscribe a single package:
 
 ```bash
-foresight report --history-days 30
+foresight subscribe --package request --version 2.88.2 --email you@example.com
 ```
 
-Fail CI when a high-severity deprecation appears:
+List subscriptions:
 
 ```bash
-foresight scan --cmd "npm test" --fail-on high
+foresight subscriptions
+```
+
+Check the internet for deprecations and newer versions:
+
+```bash
+foresight monitor --notify
+```
+
+Keep a live report open while monitor jobs run:
+
+```bash
+foresight watch --interval 2
+```
+
+Run a manual runtime scan when you want to inspect a command directly:
+
+```bash
+foresight scan --cmd "npm test" --interactive
+```
+
+## Setup Once And Forget It
+
+The intended pattern is:
+
+1. `foresight subscribe`
+2. configure email or Slack
+3. run `foresight monitor --notify` from cron, CI, or another scheduler
+
+Example cron job:
+
+```bash
+0 9 * * * cd /path/to/project && foresight monitor --notify
 ```
 
 ## What it does
 
-- captures runtime deprecations from commands and log files
-- checks `package.json` dependencies for deprecated packages
-- stores results in `.foresight/foresight.db`
+- saves package subscriptions from your project or from manual entries
+- checks npm metadata for deprecations and newer versions
+- stores findings in `.foresight/foresight.db`
 - tracks first seen, last seen, and occurrence count
 - can send Slack and email alerts
+- still supports manual runtime scanning when needed
 
 ## Alerts
 
@@ -96,7 +132,11 @@ export FORESIGHT_SMTP_USER="smtp-user"
 export FORESIGHT_SMTP_PASS="smtp-pass"
 ```
 
-Then run scans with `--notify` or rely on the configured channels automatically.
+Then run:
+
+```bash
+foresight monitor --notify
+```
 
 ## Open Source
 
@@ -116,7 +156,6 @@ Foresight CLI is meant to be published as a public npm package and maintained as
 - [Publishing](./docs/publishing.md)
 - [Contributing](./docs/contributing.md)
 - [Roadmap](./docs/roadmap.md)
-
 - [PRD](./docs/prd.md)
 - [Parsers](./docs/parsers.md)
 - [Data Model](./docs/data-model.md)
