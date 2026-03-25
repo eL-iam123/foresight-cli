@@ -22,7 +22,7 @@ foresight-cli
 The repository metadata currently points to:
 
 ```text
-https://github.com/eL-iam123/foresight-cli
+https://github.com/el-iam213/foresight-cli
 ```
 
 ## Publish

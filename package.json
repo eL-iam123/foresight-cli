@@ -37,12 +37,12 @@
   "author": "Oghenedoro Ufuoma",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/eL-iam123/foresight-cli.git"
+    "url": "git+https://github.com/el-iam213/foresight-cli.git"
   },
   "bugs": {
-    "url": "https://github.com/eL-iam123/foresight-cli/issues"
+    "url": "https://github.com/el-iam213/foresight-cli/issues"
   },
-  "homepage": "https://github.com/eL-iam123/foresight-cli#readme",
+  "homepage": "https://github.com/el-iam213/foresight-cli#readme",
   "files": [
     "src",
     "docs",

@@ -105,7 +105,7 @@ Foresight CLI is meant to be published as a public npm package and maintained as
 ## Publishing Notes
 
 - the package name is `foresight-cli`
-- the repository metadata points to `https://github.com/eL-iam123/foresight-cli`
+- the repository metadata points to `https://github.com/el-iam213/foresight-cli`
 - `npm run pack:check` shows exactly what will be published
 
 ## Documentation
