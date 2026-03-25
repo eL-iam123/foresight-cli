@@ -542,6 +542,33 @@ export class DeprecationStore {
       ]
     );
   }
+
+  getSetting(key, defaultValue = null) {
+    const row = this.db.get("SELECT value FROM settings WHERE key = ?", [key]);
+    return row ? row.value : defaultValue;
+  }
+
+  getAllSettings() {
+    const rows = this.db.all("SELECT key, value FROM settings");
+    return rows.reduce((acc, row) => {
+      acc[row.key] = row.value;
+      return acc;
+    }, {});
+  }
+
+  setSetting(key, value) {
+    const now = new Date().toISOString();
+    this.db.run(
+      `
+        INSERT INTO settings (key, value, updated_at)
+        VALUES (?, ?, ?)
+        ON CONFLICT(key) DO UPDATE SET
+          value = excluded.value,
+          updated_at = excluded.updated_at
+      `,
+      [key, String(value), now]
+    );
+  }
 }
 
 function createFingerprint(finding) {

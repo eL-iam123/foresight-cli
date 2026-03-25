@@ -12,9 +12,10 @@ import { runSubscriptionMonitor } from "../services/subscriptionMonitor.js";
 export async function runMonitorCommand(options) {
   const db = await openDatabase(resolveDbPath(options));
   const store = new DeprecationStore(db);
+  const settings = store.getAllSettings();
   const project = options.all ? null : resolveProjectName(options);
   const subscriptions = store.listActiveSubscriptions(project);
-  const alerts = createAlertDispatcher(options);
+  const alerts = createAlertDispatcher(options, settings);
   const notify = toBoolean(options.notify, alerts.enabled);
 
   if (subscriptions.length === 0) {
@@ -43,12 +44,13 @@ export async function runMonitorCommand(options) {
     project: project || "all-projects",
     store,
     notifyFinding: notify
-      ? ({ deprecation, isNew, emailTo, slackChannel }) =>
+      ? ({ deprecation, isNew, emailTo, slackChannel, telegramChatId }) =>
           alerts.notifyFinding({
             deprecation,
             isNew,
             emailTo,
-            slackChannel
+            slackChannel,
+            telegramChatId
           })
       : null
   });

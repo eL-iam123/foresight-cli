@@ -66,3 +66,24 @@ test("triage updates status and resolved findings reopen when seen again", async
   db.close();
   rmSync(dbPath, { force: true });
 });
+
+test("manages global settings", async () => {
+  const dbPath = join(tmpdir(), `foresight-settings-${Date.now()}.db`);
+  const db = await openDatabase(dbPath);
+  const store = new DeprecationStore(db);
+
+  store.setSetting("testKey", "testValue");
+  const value = store.getSetting("testKey");
+  const nonExistent = store.getSetting("missing", "default");
+  const allSettings = store.getAllSettings();
+
+  assert.equal(value, "testValue");
+  assert.equal(nonExistent, "default");
+  assert.equal(allSettings.testKey, "testValue");
+
+  store.setSetting("testKey", "updatedValue");
+  assert.equal(store.getSetting("testKey"), "updatedValue");
+
+  db.close();
+  rmSync(dbPath, { force: true });
+});

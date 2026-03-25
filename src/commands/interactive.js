@@ -6,6 +6,8 @@ import { runScanCommand } from "./scan.js";
 import { runSubscribeCommand } from "./subscribe.js";
 import { runSubscriptionsCommand } from "./subscriptions.js";
 import { runTriageCommand } from "./triage.js";
+import { runConfigCommand } from "./config.js";
+import { runServiceCommand } from "./service.js";
 import { detectProjectName, resolveProjectName } from "../core/cli.js";
 import { createPromptSession } from "../core/prompt.js";
 
@@ -56,6 +58,16 @@ export async function runInteractiveCommand(options = {}) {
             label: "Check for changes now",
             value: "monitor",
             description: "Run a monitor pass immediately."
+          },
+          {
+            label: "Global configuration",
+            value: "config",
+            description: "Update global settings for alerts and monitoring."
+          },
+          {
+            label: "Setup as service",
+            value: "service",
+            description: "Show instructions for cron or systemd scheduling."
           },
           {
             label: "View subscriptions",
@@ -123,6 +135,19 @@ export async function runInteractiveCommand(options = {}) {
         }
         case "monitor":
           await handleMonitor(prompt, activeProject);
+          break;
+        case "config":
+          await runConfigCommand({
+            ...options,
+            project: activeProject
+          });
+          break;
+        case "service":
+          await runServiceCommand({
+            ...options,
+            create: true,
+            project: activeProject
+          });
           break;
         case "subscriptions":
           await runSubscriptionsCommand({

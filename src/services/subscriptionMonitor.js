@@ -128,7 +128,8 @@ export async function runSubscriptionMonitor({
             deprecation: result.deprecation,
             isNew: result.isNew,
             emailTo: subscription.notifyEmail || null,
-            slackChannel: subscription.metadata?.notifySlackChannel || null
+            slackChannel: subscription.metadata?.notifySlackChannel || null,
+            telegramChatId: subscription.metadata?.notifyTelegramChatId || null
           });
 
           if (deliveries.length > 0) {

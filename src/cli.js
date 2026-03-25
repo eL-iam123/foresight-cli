@@ -9,6 +9,8 @@ import { runScanCommand } from "./commands/scan.js";
 import { runSubscribeCommand } from "./commands/subscribe.js";
 import { runSubscriptionsCommand } from "./commands/subscriptions.js";
 import { runTriageCommand } from "./commands/triage.js";
+import { runConfigCommand } from "./commands/config.js";
+import { runServiceCommand } from "./commands/service.js";
 import { parseArgv, printUsage } from "./core/cli.js";
 
 async function main() {
@@ -59,6 +61,12 @@ async function main() {
       return;
     case "triage":
       await runTriageCommand(options);
+      return;
+    case "config":
+      await runConfigCommand(options);
+      return;
+    case "service":
+      await runServiceCommand(options);
       return;
     case "watch":
       await runReportCommand({

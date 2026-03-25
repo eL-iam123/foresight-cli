@@ -96,6 +96,12 @@ export async function openDatabase(inputPath) {
 
     CREATE INDEX IF NOT EXISTS idx_subscription_checks_subscription
       ON subscription_checks(subscription_id, checked_at);
+
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
   `);
 
   client.persist();

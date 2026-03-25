@@ -29,6 +29,7 @@ foresight
 That opens the guided interactive menu and first-run onboarding.
 
 
+
 ## The main workflow
 
 Start onboarding from the menu, or directly:
