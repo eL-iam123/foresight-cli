@@ -6,7 +6,7 @@ Foresight CLI
 
 ## Overview
 
-Foresight CLI is an open-source developer monitoring tool that lets users subscribe once to packages or projects, polls dependency ecosystems for future-breaking changes, stores durable records over time, and notifies users when deprecations or newer versions appear.
+Foresight CLI is an open-source deprecation intelligence tool that captures runtime warnings, dependency deprecation notices, and saved watchlists, then turns them into a tracked maintenance backlog with alerts and action plans.
 
 ## Problem Statement
 
@@ -20,6 +20,8 @@ Developers rarely remember to manually check whether libraries are being depreca
 - Detect newer versions and notify users when a watchlist changes.
 - Normalize, persist, and query findings over time.
 - Alert teams through Slack and email with minimal operational overhead.
+- Give teams a prioritized deprecation action plan instead of a flat list.
+- Support triage workflows so known issues can be resolved or ignored without losing history.
 
 ## Non-Goals
 
@@ -50,6 +52,13 @@ Developers rarely remember to manually check whether libraries are being depreca
 - Open a guided first-run flow from `foresight` or `foresight onboard`.
 - Let beginners choose between a local project, a GitHub repo, or a single package.
 - Make the default workflow discoverable without requiring users to memorize flags.
+
+### Prioritization And Triage
+
+- Rank active findings by urgency.
+- Generate suggested next actions from the finding type and replacement hints.
+- Allow status transitions between `open`, `resolved`, and `ignored`.
+- Reopen resolved findings automatically if they recur.
 
 ### Runtime Scanner
 

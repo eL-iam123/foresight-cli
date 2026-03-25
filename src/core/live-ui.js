@@ -1,4 +1,15 @@
 import { formatTable, formatTimestamp, truncate } from "./output.js";
+import {
+  blue,
+  bold,
+  cyan,
+  dim,
+  green,
+  magenta,
+  orange,
+  red,
+  yellow
+} from "./ansi.js";
 
 export function createLiveRenderer({ enabled, render, refreshMs = 120 }) {
   if (!enabled) {
@@ -93,25 +104,25 @@ export function renderScanDashboard({
     : "  No output captured yet.";
 
   const lines = [
-    "Foresight Live Scan",
+    bold(cyan("Foresight Live Scan")),
     "",
-    `Status: ${status.toUpperCase()}  Duration: ${formatDuration(durationMs)}  Captured: ${captured.length}`,
-    `Project: ${project}`,
-    `Source: ${source}${follow ? " (follow mode)" : ""}`,
-    `Input: ${input}`,
-    `Severity: high ${severity.high} | medium ${severity.medium} | low ${severity.low}`,
+    `${blue("Status:")} ${formatStatus(status)}  ${blue("Duration:")} ${formatDuration(durationMs)}  ${blue("Captured:")} ${magenta(captured.length)}`,
+    `${blue("Project:")} ${project}`,
+    `${blue("Source:")} ${source}${follow ? orange(" (follow mode)") : ""}`,
+    `${blue("Input:")} ${input}`,
+    `${blue("Severity:")} high ${red(severity.high)} | medium ${yellow(severity.medium)} | low ${green(severity.low)}`,
     "",
-    "Recent Findings",
+    bold(orange("Recent Findings")),
     findingsTable,
     "",
-    "Recent Output",
+    bold(orange("Recent Output")),
     outputBlock
   ];
 
   if (status === "running") {
-    lines.push("", "Live updates enabled. Press Ctrl+C to stop.");
+    lines.push("", green("Live updates enabled. Press Ctrl+C to stop."));
   } else {
-    lines.push("", `Completed at ${formatTimestamp(completedAt)}.`);
+    lines.push("", `${green("Completed at")} ${formatTimestamp(completedAt)}.`);
   }
 
   return `${lines.join("\n")}\n`;
@@ -154,21 +165,21 @@ export function renderReportDashboard({
   );
 
   const lines = [
-    watchMode ? "Foresight Live Report" : "Foresight Report",
+    bold(cyan(watchMode ? "Foresight Live Report" : "Foresight Report")),
     "",
-    `Project: ${project}`,
-    `Last refresh: ${formatTimestamp(updatedAt)}`,
-    `Open deprecations: ${summary.total} (high: ${summary.high}, medium: ${summary.medium}, low: ${summary.low})`,
+    `${blue("Project:")} ${project}`,
+    `${blue("Last refresh:")} ${formatTimestamp(updatedAt)}`,
+    `${blue("Open deprecations:")} ${magenta(summary.total)} (high: ${red(summary.high)}, medium: ${yellow(summary.medium)}, low: ${green(summary.low)})`,
     "",
-    "Tracked Deprecations",
+    bold(orange("Tracked Deprecations")),
     itemTable,
     "",
-    "Recent History",
+    bold(orange("Recent History")),
     historyTable
   ];
 
   if (watchMode) {
-    lines.push("", `Refreshing every ${intervalSeconds}s. Press Ctrl+C to stop.`);
+    lines.push("", `${dim("Refreshing every")} ${orange(`${intervalSeconds}s`)}${dim(". Press Ctrl+C to stop.")}`);
   }
 
   return `${lines.join("\n")}\n`;
@@ -194,4 +205,22 @@ function formatDuration(durationMs) {
   }
 
   return `${minutes}m ${seconds}s`;
+}
+
+function formatStatus(status) {
+  const value = String(status || "").toUpperCase();
+
+  if (status === "running") {
+    return green(value);
+  }
+
+  if (status === "failed") {
+    return red(value);
+  }
+
+  if (status === "completed") {
+    return cyan(value);
+  }
+
+  return orange(value);
 }

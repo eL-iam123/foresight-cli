@@ -1,12 +1,15 @@
 # Foresight CLI
 
-Foresight CLI is an open-source monitoring tool for developers who want to set up dependency watchlists once and get notified later when something is deprecated or when a newer version becomes available.
+Foresight CLI is an open-source deprecation intelligence tool for developers who want early warning on future-breaking changes, not just version bump notifications.
+
+It watches runtime warnings, dependency deprecation notices, and saved subscriptions, then turns them into a tracked backlog with alerts, action plans, and triage.
 
 It is built to be beginner-friendly:
 
 - run `foresight` and follow onboarding
-- subscribe once
-- point it at a GitHub repo or a local project
+- scan a local project, logs, or a GitHub-backed subscription source
+- turn warnings into a prioritized action plan
+- mark findings resolved or ignored so the backlog stays clean
 - run checks on a schedule
 - get email or Slack alerts
 - keep local history in SQLite
@@ -25,6 +28,22 @@ foresight
 
 That opens the guided interactive menu and first-run onboarding.
 
+## Why this is not just Dependabot
+
+Dependabot is good at upgrade PRs and security patching.
+
+Foresight focuses on a different problem:
+
+- runtime deprecations that only appear when code actually runs
+- maintainer deprecation notices that need tracking, not just upgrades
+- historical backlog and triage, not only pull requests
+- prioritized next actions for cleanup work
+- Slack and email alerts outside a GitHub-only workflow
+
+Short version:
+
+> Dependabot tells you what can be upgraded. Foresight tells you what is starting to rot.
+
 ## The main workflow
 
 Start onboarding from the menu, or directly:
@@ -39,7 +58,19 @@ Subscribe the current project from the menu, or directly:
 foresight subscribe
 ```
 
-Or subscribe a GitHub repo so Foresight keeps checking the repo's `package.json` later:
+Scan the current project for deprecated dependencies:
+
+```bash
+foresight deps
+```
+
+Run a real command and catch runtime deprecations live:
+
+```bash
+foresight scan --cmd "npm test" --interactive
+```
+
+Subscribe a GitHub repo if you want GitHub to be one source of dependency truth:
 
 ```bash
 foresight subscribe --repo el-iam213/foresight-cli
@@ -55,6 +86,12 @@ Review what Foresight has tracked:
 
 ```bash
 foresight report
+```
+
+See only the ranked action plan:
+
+```bash
+foresight report --plan
 ```
 
 ## Common commands
@@ -75,6 +112,18 @@ Subscribe all packages from `package.json`:
 
 ```bash
 foresight subscribe
+```
+
+Scan direct dependencies for deprecations right now:
+
+```bash
+foresight deps
+```
+
+Run a live runtime scan:
+
+```bash
+foresight scan --cmd "npm test" --interactive
 ```
 
 Subscribe packages from a GitHub repo:
@@ -101,16 +150,22 @@ Check the internet for deprecations and newer versions:
 foresight monitor --notify
 ```
 
+Show the prioritized cleanup plan:
+
+```bash
+foresight report --plan
+```
+
+Mark a known item resolved or ignored:
+
+```bash
+foresight triage --id <deprecation-id> --status resolved
+```
+
 Keep a live report open while monitor jobs run:
 
 ```bash
 foresight watch --interval 2
-```
-
-Run a manual runtime scan when you want to inspect a command directly:
-
-```bash
-foresight scan --cmd "npm test" --interactive
 ```
 
 ## Setup Once And Forget It
@@ -118,8 +173,9 @@ foresight scan --cmd "npm test" --interactive
 The intended pattern is:
 
 1. `foresight onboard`
-2. configure email or Slack
-3. run `foresight monitor --notify` from cron, CI, or another scheduler
+2. run `foresight deps` or `foresight scan --cmd "npm test"` to capture current debt
+3. configure email or Slack
+4. run `foresight monitor --notify` from cron, CI, or another scheduler
 
 Example cron job:
 
@@ -129,14 +185,24 @@ Example cron job:
 
 ## What it does
 
-- saves package subscriptions from your project or from manual entries
-- can treat a GitHub repo as the source of truth for dependency versions
+- captures runtime deprecations from real command output and log files
+- scans direct dependencies for maintainer deprecation notices
+- saves subscriptions from local projects, manual packages, or GitHub-backed sources
 - checks npm metadata for deprecations and newer versions
-- refreshes GitHub-backed subscriptions from the repo before each monitor run
+- ranks findings into a prioritized action plan
+- lets you triage findings as open, resolved, or ignored
 - stores findings in `.foresight/foresight.db`
 - tracks first seen, last seen, and occurrence count
 - can send Slack and email alerts
-- still supports manual runtime scanning when needed
+- refreshes GitHub-backed subscriptions from the repo before each monitor run
+
+## Features That Stand Out
+
+- Runtime-aware detection: catches warnings that package bots never see.
+- Prioritized action plan: `foresight report --plan` ranks what to fix first.
+- Triage workflow: `foresight triage` lets you manage the backlog like real maintenance work.
+- Local history: the same issue can be tracked across scans, monitor runs, and dependency checks.
+- GitHub as input, not product: repos can feed subscriptions without making this a GitHub-only tool.
 
 ## GitHub Monitoring
 

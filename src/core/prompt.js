@@ -1,6 +1,7 @@
 import readlinePromises from "node:readline/promises";
 import { emitKeypressEvents } from "node:readline";
 import { stdin, stdout } from "node:process";
+import { blue, bold, cyan, dim, orange } from "./ansi.js";
 
 export function createPromptSession() {
   const rl = readlinePromises.createInterface({
@@ -13,15 +14,17 @@ export function createPromptSession() {
   return {
     async text(question, { defaultValue = "", allowEmpty = false } = {}) {
       while (true) {
-        const suffix = defaultValue ? ` (${defaultValue})` : "";
-        const answer = (await rl.question(`${question}${suffix}: `)).trim();
+        const suffix = defaultValue ? ` ${dim(`(${defaultValue})`)}` : "";
+        const answer = (
+          await rl.question(`${bold(cyan(question))}${suffix}${blue(":")} `)
+        ).trim();
         const resolved = answer || defaultValue;
 
         if (resolved || allowEmpty) {
           return resolved;
         }
 
-        stdout.write("Please enter a value.\n");
+        stdout.write(`${orange("Please enter a value.")}\n`);
       }
     },
 
@@ -29,7 +32,11 @@ export function createPromptSession() {
       const hint = defaultValue ? "Y/n" : "y/N";
 
       while (true) {
-        const answer = (await rl.question(`${question} (${hint}): `))
+        const answer = (
+          await rl.question(
+            `${bold(cyan(question))} ${orange(`(${hint})`)}${blue(":")} `
+          )
+        )
           .trim()
           .toLowerCase();
 
@@ -45,7 +52,7 @@ export function createPromptSession() {
           return false;
         }
 
-        stdout.write("Please answer yes or no.\n");
+        stdout.write(`${orange("Please answer yes or no.")}\n`);
       }
     },
 
@@ -69,23 +76,23 @@ export function createPromptSession() {
 
         const render = () => {
           stdout.write("\x1b[2J\x1b[H");
-          stdout.write("Foresight CLI\n");
-          stdout.write("Use arrow keys and press Enter.\n\n");
-          stdout.write(`${question}\n\n`);
+          stdout.write(`${bold(cyan("Foresight CLI"))}\n`);
+          stdout.write(`${dim("Use arrow keys and press Enter.")}\n\n`);
+          stdout.write(`${bold(question)}\n\n`);
 
           options.forEach((option, optionIndex) => {
             const isSelected = optionIndex === index;
-            const prefix = isSelected ? "›" : " ";
-            const label = isSelected ? `\x1b[36m${option.label}\x1b[0m` : option.label;
+            const prefix = isSelected ? orange("›") : dim("·");
+            const label = isSelected ? bold(cyan(option.label)) : option.label;
             stdout.write(` ${prefix} ${label}\n`);
 
             if (isSelected && option.description) {
-              stdout.write(`   ${option.description}\n`);
+              stdout.write(`   ${orange(option.description)}\n`);
             }
           });
 
           if (helpText) {
-            stdout.write(`\n${helpText}\n`);
+            stdout.write(`\n${dim(orange(helpText))}\n`);
           }
         };
 
@@ -141,13 +148,15 @@ export function createPromptSession() {
 }
 
 async function fallbackSelect(rl, question, options) {
-  stdout.write(`\n${question}\n`);
+  stdout.write(`\n${bold(question)}\n`);
   options.forEach((option, index) => {
-    stdout.write(`  ${index + 1}. ${option.label}\n`);
+    stdout.write(`  ${orange(index + 1)}. ${option.label}\n`);
   });
 
   while (true) {
-    const answer = (await rl.question("\nChoose a number: ")).trim();
+    const answer = (
+      await rl.question(`\n${bold(cyan("Choose a number"))}${blue(":")} `)
+    ).trim();
     const numericChoice = Number(answer);
 
     if (
@@ -158,6 +167,6 @@ async function fallbackSelect(rl, question, options) {
       return options[numericChoice - 1].value;
     }
 
-    stdout.write("Please choose one of the listed numbers.\n");
+    stdout.write(`${orange("Please choose one of the listed numbers.")}\n`);
   }
 }

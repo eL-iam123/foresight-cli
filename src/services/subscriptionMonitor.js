@@ -343,11 +343,7 @@ export function lookupNpmPackageStatus(packageName) {
 function createFindingsFromStatus({ subscription, status }) {
   const findings = [];
 
-  if (
-    status.latestVersion &&
-    subscription.currentVersion &&
-    status.latestVersion !== subscription.currentVersion
-  ) {
+  if (shouldCreateUpgradeFinding(subscription.currentVersion, status.latestVersion)) {
     findings.push({
       type: "upgrade",
       project: subscription.project,
@@ -388,6 +384,21 @@ function createFindingsFromStatus({ subscription, status }) {
   }
 
   return findings;
+}
+
+function shouldCreateUpgradeFinding(currentVersion, latestVersion) {
+  if (!currentVersion || !latestVersion) {
+    return false;
+  }
+
+  const normalizedCurrent = normalizeVersionSpec(currentVersion);
+  const normalizedLatest = normalizeVersionSpec(latestVersion);
+
+  if (!normalizedCurrent || !normalizedLatest) {
+    return String(currentVersion).trim() !== String(latestVersion).trim();
+  }
+
+  return compareVersions(normalizedLatest, normalizedCurrent) > 0;
 }
 
 function createSubscriptionsFromPackageJson(packageJson, { includeDev, metadata }) {
@@ -497,4 +508,30 @@ function getGitHubGroupKey(subscription) {
 
 function normalizePackageFile(packageFile) {
   return String(packageFile || "package.json").replace(/^\.?\//, "");
+}
+
+function normalizeVersionSpec(value) {
+  const match = String(value).trim().match(/\d+(?:\.\d+){0,2}/);
+  return match ? match[0] : null;
+}
+
+function compareVersions(left, right) {
+  const leftParts = left.split(".").map((part) => Number(part));
+  const rightParts = right.split(".").map((part) => Number(part));
+  const length = Math.max(leftParts.length, rightParts.length);
+
+  for (let index = 0; index < length; index += 1) {
+    const leftValue = leftParts[index] || 0;
+    const rightValue = rightParts[index] || 0;
+
+    if (leftValue > rightValue) {
+      return 1;
+    }
+
+    if (leftValue < rightValue) {
+      return -1;
+    }
+  }
+
+  return 0;
 }

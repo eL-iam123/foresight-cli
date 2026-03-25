@@ -130,9 +130,36 @@ Examples:
 ```bash
 foresight report --project api
 foresight report --project api --severity high --type runtime
+foresight report --plan
 foresight report --watch --interval 2
 foresight report --json --history-days 30
 ```
+
+Notes:
+
+- `report` always includes a small prioritized action plan.
+- `report --plan` prints only the ranked cleanup plan.
+- The action plan scores findings by severity, freshness, recurrence, and type.
+
+## `foresight triage`
+
+Update the status of a tracked deprecation.
+
+Examples:
+
+```bash
+foresight triage --id 1234 --status resolved
+foresight triage --id 1234 --status ignored
+foresight triage --id 1234 --status open
+```
+
+Use this to keep the active backlog clean.
+
+Valid statuses:
+
+- `open`
+- `resolved`
+- `ignored`
 
 ## `foresight watch`
 

@@ -29,18 +29,20 @@ test("detectProjectName falls back to folder name", () => {
   rmSync(projectDir, { recursive: true, force: true });
 });
 
-test("parseArgv recognizes interactive and watch flags", () => {
+test("parseArgv recognizes interactive, watch, and plan flags", () => {
   const parsed = parseArgv([
     "scan",
     "--interactive",
     "--cmd",
     "npm test",
-    "--watch"
+    "--watch",
+    "--plan"
   ]);
 
   assert.equal(parsed.command, "scan");
   assert.equal(parsed.options.interactive, true);
   assert.equal(parsed.options.watch, true);
+  assert.equal(parsed.options.plan, true);
   assert.equal(parsed.options.cmd, "npm test");
 });
 

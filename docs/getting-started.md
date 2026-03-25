@@ -30,6 +30,20 @@ foresight subscribe
 
 This reads `package.json` and saves the current dependency set as a watchlist.
 
+## Scan for deprecations right now
+
+Check installed dependencies:
+
+```bash
+foresight deps
+```
+
+Check a real runtime path:
+
+```bash
+foresight scan --cmd "npm test" --interactive
+```
+
 ## Or subscribe a GitHub repo
 
 ```bash
@@ -37,6 +51,8 @@ foresight subscribe --repo owner/repo
 ```
 
 This fetches the repo's `package.json`, saves its dependencies as subscriptions, and refreshes them from GitHub on future monitor runs.
+
+Use this as a source input, not as the main product story. The main value is still deprecation tracking, runtime capture, and action planning.
 
 ## Run the monitor later
 
@@ -72,6 +88,26 @@ foresight monitor --notify
 ```bash
 foresight report --history-days 14
 ```
+
+## View the prioritized action plan
+
+```bash
+foresight report --plan
+```
+
+This shows the highest-priority cleanup work first.
+
+## Triage known items
+
+```bash
+foresight triage --id <deprecation-id> --status resolved
+```
+
+Valid statuses:
+
+- `open`
+- `resolved`
+- `ignored`
 
 ## Keep a live report open
 

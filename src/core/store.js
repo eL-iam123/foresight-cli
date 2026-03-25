@@ -81,6 +81,7 @@ export class DeprecationStore {
         };
       } else {
         const mergedSeverity = maxSeverity(existing.severity, finding.severity);
+        const nextStatus = existing.status === "resolved" ? "open" : existing.status;
         this.db.run(
           `
             UPDATE deprecations
@@ -89,7 +90,8 @@ export class DeprecationStore {
               occurrence_count = occurrence_count + 1,
               severity = ?,
               replacement = COALESCE(?, replacement),
-              metadata_json = ?
+              metadata_json = ?,
+              status = ?
             WHERE fingerprint = ?
           `,
           [
@@ -97,6 +99,7 @@ export class DeprecationStore {
             mergedSeverity,
             finding.replacement || existing.replacement || null,
             metadataJson,
+            nextStatus,
             fingerprint
           ]
         );
@@ -115,8 +118,10 @@ export class DeprecationStore {
           firstSeenAt: existing.first_seen_at,
           lastSeenAt: now,
           occurrenceCount: Number(existing.occurrence_count) + 1,
-          status: existing.status,
-          metadata: finding.metadata || existing.metadata_json || {}
+          status: nextStatus,
+          metadata:
+            finding.metadata ||
+            (existing.metadata_json ? JSON.parse(existing.metadata_json) : {})
         };
       }
 
@@ -228,6 +233,21 @@ export class DeprecationStore {
       params.push(filters.project);
     }
 
+    if (filters.severity) {
+      clauses.push("severity = ?");
+      params.push(filters.severity);
+    }
+
+    if (filters.type) {
+      clauses.push("type = ?");
+      params.push(filters.type);
+    }
+
+    if (filters.status && filters.status !== "all") {
+      clauses.push("status = ?");
+      params.push(filters.status);
+    }
+
     const whereClause = clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "";
 
     const totals = this.db.get(
@@ -291,6 +311,44 @@ export class DeprecationStore {
     `;
 
     return this.db.all(query, params);
+  }
+
+  getDeprecationById(id) {
+    const row = this.db.get(`SELECT * FROM deprecations WHERE id = ?`, [id]);
+    return row ? mapDeprecationRow(row) : null;
+  }
+
+  updateDeprecationStatus({ id, status, project }) {
+    const record = project
+      ? this.db.get(`SELECT * FROM deprecations WHERE id = ? AND project = ?`, [id, project])
+      : this.db.get(`SELECT * FROM deprecations WHERE id = ?`, [id]);
+
+    if (!record) {
+      return null;
+    }
+
+    const updatedAt = new Date().toISOString();
+    this.db.run(
+      `
+        UPDATE deprecations
+        SET
+          status = ?,
+          metadata_json = ?,
+          last_seen_at = ?
+        WHERE id = ?
+      `,
+      [
+        status,
+        serializeJson({
+          ...(record.metadata_json ? JSON.parse(record.metadata_json) : {}),
+          triagedAt: updatedAt
+        }),
+        record.last_seen_at,
+        id
+      ]
+    );
+
+    return this.getDeprecationById(id);
   }
 
   upsertSubscription(subscription) {

@@ -117,6 +117,39 @@ test("subscription monitor detects new versions and deprecations", async () => {
   rmSync(dbPath, { force: true });
 });
 
+test("subscription monitor does not flag a version range that already matches latest", async () => {
+  const dbPath = join(tmpdir(), `foresight-range-check-${Date.now()}.db`);
+  const db = await openDatabase(dbPath);
+  const store = new DeprecationStore(db);
+
+  const created = store.upsertSubscription({
+    project: "demo-app",
+    targetType: "npm-package",
+    targetName: "sql.js",
+    currentVersion: "^1.14.1",
+    metadata: {
+      source: "manual"
+    }
+  });
+
+  const result = await runSubscriptionMonitor({
+    subscriptions: [created.subscription],
+    store,
+    lookupPackageStatus: async () => ({
+      latestVersion: "1.14.1",
+      deprecatedMessage: null
+    }),
+    now: () => "2026-03-25T12:00:00.000Z"
+  });
+
+  assert.equal(result.checked, 1);
+  assert.equal(result.changed, 0);
+  assert.deepEqual(result.findings, []);
+
+  db.close();
+  rmSync(dbPath, { force: true });
+});
+
 test("subscription monitor syncs GitHub subscriptions before checking npm", async () => {
   const dbPath = join(tmpdir(), `foresight-github-sync-${Date.now()}.db`);
   const db = await openDatabase(dbPath);

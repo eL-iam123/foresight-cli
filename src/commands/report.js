@@ -2,6 +2,7 @@ import { openDatabase } from "../core/db.js";
 import { DeprecationStore } from "../core/store.js";
 import { resolveDbPath, toBoolean, toNumber } from "../core/cli.js";
 import { createLiveRenderer, renderReportDashboard } from "../core/live-ui.js";
+import { buildActionPlan } from "../core/prioritization.js";
 import { formatTable, formatTimestamp, printJson, truncate } from "../core/output.js";
 
 export async function runReportCommand(options) {
@@ -27,8 +28,15 @@ export async function runReportCommand(options) {
 
   process.stdout.write(`Project: ${output.project}\n`);
   process.stdout.write(
-    `Open deprecations: ${output.summary.total} (high: ${output.summary.high}, medium: ${output.summary.medium}, low: ${output.summary.low})\n\n`
+    `${output.status === "open" ? "Open deprecations" : "Tracked deprecations"}: ${output.summary.total} (high: ${output.summary.high}, medium: ${output.summary.medium}, low: ${output.summary.low})\n\n`
   );
+
+  process.stdout.write("Priority action plan\n");
+  process.stdout.write(`${formatActionPlan(output.actionPlan)}\n\n`);
+
+  if (toBoolean(options.plan, false)) {
+    return;
+  }
 
   process.stdout.write(
     `${formatTable(
@@ -64,16 +72,55 @@ export async function runReportCommand(options) {
   );
 }
 
+function formatActionPlan(items) {
+  if (items.length === 0) {
+    return "No action needed right now.";
+  }
+
+  return items
+    .map((item, index) => {
+      const lines = [
+        `${index + 1}. ${item.module} (${formatUrgency(item.urgency)})`,
+        `   Why it matters: ${item.reason}`,
+        item.currentVersion && item.latestVersion
+          ? `   Version check: your project declares ${item.currentVersion}; npm latest is ${item.latestVersion}.`
+          : null,
+        `   Next step: ${item.nextAction}`
+      ].filter(Boolean);
+
+      return lines.join("\n");
+    })
+    .join("\n\n");
+}
+
+function formatUrgency(urgency) {
+  if (urgency === "now") {
+    return "fix now";
+  }
+
+  if (urgency === "soon") {
+    return "plan soon";
+  }
+
+  return "can wait";
+}
+
 async function loadReportData(options, { project, limit, historyDays }) {
   const db = await openDatabase(resolveDbPath(options));
   const store = new DeprecationStore(db);
+  const status = options.status || "open";
 
-  const summary = store.getSummary({ project });
+  const summary = store.getSummary({
+    project,
+    severity: options.severity,
+    type: options.type,
+    status
+  });
   const items = store.listDeprecations({
     project,
     severity: options.severity,
     type: options.type,
-    status: options.status || "open",
+    status,
     limit
   });
   const history = store.listDailyEventCounts(historyDays, project);
@@ -82,10 +129,14 @@ async function loadReportData(options, { project, limit, historyDays }) {
 
   return {
     project: project || "all-projects",
+    status,
     summary,
     historyDays,
     history,
-    items
+    items,
+    actionPlan: buildActionPlan(items, {
+      limit: toBoolean(options.plan, false) ? limit : Math.min(limit, 5)
+    })
   };
 }
 

@@ -5,6 +5,7 @@ import { runReportCommand } from "./report.js";
 import { runScanCommand } from "./scan.js";
 import { runSubscribeCommand } from "./subscribe.js";
 import { runSubscriptionsCommand } from "./subscriptions.js";
+import { runTriageCommand } from "./triage.js";
 import { detectProjectName, resolveProjectName } from "../core/cli.js";
 import { createPromptSession } from "../core/prompt.js";
 
@@ -67,6 +68,16 @@ export async function runInteractiveCommand(options = {}) {
             description: "See tracked findings and history."
           },
           {
+            label: "View action plan",
+            value: "plan",
+            description: "See the highest-priority deprecations and what to do next."
+          },
+          {
+            label: "Triage a finding",
+            value: "triage",
+            description: "Mark a deprecation as resolved or ignored."
+          },
+          {
             label: "Run a live runtime scan",
             value: "scan",
             description: "Capture deprecations from command output or log files."
@@ -120,6 +131,15 @@ export async function runInteractiveCommand(options = {}) {
           break;
         case "report":
           await handleReport(prompt, activeProject);
+          break;
+        case "plan":
+          await runReportCommand({
+            project: activeProject,
+            plan: true
+          });
+          break;
+        case "triage":
+          await handleTriage(prompt, activeProject);
           break;
         case "scan":
           await handleScan(prompt, activeProject);
@@ -268,6 +288,33 @@ async function handleScan(prompt, project) {
     file: filePath,
     follow,
     interactive: true
+  });
+}
+
+async function handleTriage(prompt, project) {
+  const id = await prompt.text("Deprecation id");
+  const status = await prompt.select("Set status to", [
+    {
+      label: "open",
+      value: "open",
+      description: "Show this item in reports again."
+    },
+    {
+      label: "resolved",
+      value: "resolved",
+      description: "Hide it from the active backlog until it reappears."
+    },
+    {
+      label: "ignored",
+      value: "ignored",
+      description: "Suppress it from the active backlog."
+    }
+  ]);
+
+  await runTriageCommand({
+    project,
+    id,
+    status
   });
 }
 

@@ -33,6 +33,13 @@ Reporting + Live Terminal UI + Slack/Email Alerts
 4. Newly added dependencies are subscribed automatically.
 5. Dependencies removed from the repo are marked inactive locally.
 
+## Triage and prioritization
+
+1. Every finding is persisted as a durable deprecation record plus event history.
+2. Reports rank active findings into an action plan using severity, recurrence, freshness, and type.
+3. Users can mark records as `resolved` or `ignored` without deleting the underlying history.
+4. If a resolved issue reappears in a later scan, Foresight reopens it automatically.
+
 ## Runtime path
 
 1. `scan --cmd` runs a child process and captures its combined output for deprecation parsing.

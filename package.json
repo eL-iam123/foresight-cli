@@ -1,7 +1,7 @@
 {
   "name": "foresight-cli",
   "version": "0.1.0",
-  "description": "Open-source CLI that monitors local projects and GitHub repos for deprecations and newer versions, then alerts you later",
+  "description": "Open-source CLI for deprecation intelligence across runtime warnings, dependency notices, and tracked subscriptions",
   "type": "module",
   "bin": {
     "foresight": "src/cli.js"
@@ -20,6 +20,7 @@
   "keywords": [
     "cli",
     "deprecation",
+    "tech-debt",
     "monitoring",
     "github",
     "subscriptions",

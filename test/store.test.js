@@ -35,3 +35,34 @@ test("records and aggregates deprecation sightings", async () => {
   db.close();
   rmSync(dbPath, { force: true });
 });
+
+test("triage updates status and resolved findings reopen when seen again", async () => {
+  const dbPath = join(tmpdir(), `foresight-triage-${Date.now()}.db`);
+  const db = await openDatabase(dbPath);
+  const store = new DeprecationStore(db);
+
+  const finding = {
+    type: "runtime",
+    project: "test-project",
+    module: "legacy-api",
+    message: "legacy-api will be removed in the next major version",
+    severity: "high",
+    source: "node",
+    metadata: {}
+  };
+
+  const created = store.recordFinding(finding);
+  const resolved = store.updateDeprecationStatus({
+    id: created.deprecation.id,
+    status: "resolved",
+    project: "test-project"
+  });
+  const reopened = store.recordFinding(finding);
+
+  assert.equal(resolved.status, "resolved");
+  assert.equal(reopened.isNew, false);
+  assert.equal(reopened.deprecation.status, "open");
+
+  db.close();
+  rmSync(dbPath, { force: true });
+});
