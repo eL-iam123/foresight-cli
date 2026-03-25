@@ -1,7 +1,7 @@
 {
   "name": "foresight-cli",
   "version": "0.1.0",
-  "description": "Proactive deprecation intelligence CLI for runtime warnings and dependency ecosystems",
+  "description": "Open-source CLI that finds, tracks, and reports deprecation warnings for Node.js projects",
   "type": "module",
   "bin": {
     "foresight": "src/cli.js"
@@ -9,8 +9,10 @@
   "scripts": {
     "start": "node ./src/cli.js",
     "test": "node --test",
-    "scan:sample": "node ./src/cli.js scan --cmd \"node ./test/fixtures/emit-warning.fixture.js\"",
-    "report": "node ./src/cli.js report"
+    "scan:sample": "node ./src/cli.js scan --cmd \"node ./fixtures/emit-warning.fixture.js\"",
+    "report": "node ./src/cli.js report",
+    "pack:check": "npm_config_cache=.npm-cache npm pack --dry-run",
+    "prepublishOnly": "npm test && npm run pack:check"
   },
   "engines": {
     "node": ">=18.18"
@@ -22,18 +24,31 @@
     "tracking",
     "sqlite",
     "slack",
-    "email"
+    "email",
+    "nodejs",
+    "oss",
+    "open-source"
   ],
   "license": "MIT",
   "dependencies": {
     "nodemailer": "^6.10.0",
     "sql.js": "^1.14.1"
   },
-  "main": "index.js",
-  "directories": {
-    "doc": "docs",
-    "test": "test"
+  "author": "Oghenedoro Ufuoma",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eL-iam123/foresight-cli.git"
   },
-  "devDependencies": {},
-  "author": ""
+  "bugs": {
+    "url": "https://github.com/eL-iam123/foresight-cli/issues"
+  },
+  "homepage": "https://github.com/eL-iam123/foresight-cli#readme",
+  "files": [
+    "src",
+    "docs",
+    "fixtures",
+    "README.md",
+    "LICENSE",
+    "CODE_OF_CONDUCT.md"
+  ]
 }

@@ -6,7 +6,7 @@ Foresight CLI
 
 ## Overview
 
-Foresight CLI is a proactive developer intelligence platform for commercial software teams. It detects deprecation warnings during runtime and dependency analysis, stores them as durable records, tracks them over time, and escalates the right issues through Slack and email before they become breaking changes.
+Foresight CLI is an open-source developer tool that detects deprecation warnings during runtime and dependency analysis, stores them as durable records, tracks them over time, and helps developers act on them before they become breaking changes.
 
 ## Problem Statement
 
@@ -33,6 +33,7 @@ Deprecation warnings are usually transient, unowned, and disconnected from deliv
 - OSS maintainers
 - Small engineering teams
 - DevOps and platform teams that want upgrade risk surfaced earlier
+- First-time CLI users who need simple workflows and copy-paste examples
 
 ## Functional Requirements
 
@@ -72,14 +73,14 @@ Deprecation warnings are usually transient, unowned, and disconnected from deliv
 - Low overhead during runtime scans
 - Fault-tolerant parsing
 - Extensible parser architecture
-- Commercial-ready alerting hooks and data persistence
+- Open-source-friendly contribution flow and documentation
 
 ## MVP Scope
 
 - Node.js runtime parser
 - Direct dependency analyzer
 - SQLite storage
-- CLI commands: `scan`, `deps`, `report`
+- CLI commands: `demo`, `scan`, `deps`, `report`
 - Slack and email alert delivery
 
 ## Future Scope

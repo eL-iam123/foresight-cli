@@ -1,6 +1,6 @@
 import { openDatabase } from "../core/db.js";
 import { DeprecationStore } from "../core/store.js";
-import { resolveDbPath, resolveProjectName, toBoolean, toNumber } from "../core/cli.js";
+import { resolveDbPath, toBoolean, toNumber } from "../core/cli.js";
 import { formatTable, formatTimestamp, printJson, truncate } from "../core/output.js";
 
 export async function runReportCommand(options) {

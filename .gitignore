@@ -1,4 +1,5 @@
 node_modules/
 .foresight/
+.npm-cache/
 coverage/
 *.log

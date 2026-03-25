@@ -12,7 +12,9 @@ import { scanCommand, scanFile } from "../services/runtimeScanner.js";
 
 export async function runScanCommand(options) {
   if (!options.cmd && !options.file) {
-    throw new Error("scan requires either --cmd or --file");
+    throw new Error(
+      "scan requires either --cmd or --file. Try `foresight demo` for a first run."
+    );
   }
 
   const db = await openDatabase(resolveDbPath(options));
@@ -20,6 +22,7 @@ export async function runScanCommand(options) {
   const alerts = createAlertDispatcher(options);
   const project = resolveProjectName(options);
   const notify = toBoolean(options.notify, alerts.enabled);
+  const quiet = toBoolean(options.quiet, toBoolean(options.json, false));
   const captured = [];
   let matchingSeverityCount = 0;
 
@@ -49,7 +52,7 @@ export async function runScanCommand(options) {
       }
     }
 
-    if (!toBoolean(options.quiet, false)) {
+    if (!quiet) {
       process.stderr.write(
         `[foresight] captured ${result.deprecation.severity.toUpperCase()} ${result.deprecation.type} deprecation: ${truncate(
           result.deprecation.message,
@@ -62,7 +65,8 @@ export async function runScanCommand(options) {
   const scanResult = options.cmd
     ? await scanCommand({
         command: options.cmd,
-        onFinding: persistFinding
+        onFinding: persistFinding,
+        mirrorOutput: !toBoolean(options.json, false)
       })
     : await scanFile({
         filePath: options.file,
@@ -91,6 +95,9 @@ export async function runScanCommand(options) {
     printJson(output);
   } else {
     process.stdout.write(
+      `Project: ${project}\nScanned ${options.cmd ? "command" : "file"}: ${options.cmd || options.file}\n\n`
+    );
+    process.stdout.write(
       `${formatTable(
         [
           { key: "severity", label: "Severity" },
@@ -110,6 +117,12 @@ export async function runScanCommand(options) {
         }))
       )}\n`
     );
+
+    if (captured.length === 0) {
+      process.stdout.write(
+        "\nNo deprecations were captured in this run.\n"
+      );
+    }
   }
 
   db.close();

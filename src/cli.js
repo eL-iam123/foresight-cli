@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { runDepsCommand } from "./commands/deps.js";
+import { runDemoCommand } from "./commands/demo.js";
 import { runReportCommand } from "./commands/report.js";
 import { runScanCommand } from "./commands/scan.js";
 import { parseArgv, printUsage } from "./core/cli.js";
@@ -13,6 +14,9 @@ async function main() {
   }
 
   switch (command) {
+    case "demo":
+      await runDemoCommand(options);
+      return;
     case "scan":
       await runScanCommand(options);
       return;

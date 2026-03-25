@@ -1,47 +1,118 @@
 import { readFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
-import { createReadStream, watch as watchFile } from "node:fs";
-import readline from "node:readline";
+import {
+  createReadStream,
+  mkdirSync,
+  rmSync,
+  watch as watchFile,
+  writeFileSync
+} from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { parseRuntimeDeprecation } from "../parsers/nodeDeprecationParser.js";
 
-export async function scanCommand({ command, source = "node", onFinding }) {
+export async function scanCommand({
+  command,
+  source = "node",
+  onFinding,
+  mirrorOutput = true
+}) {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, {
-      cwd: process.cwd(),
-      env: process.env,
-      shell: true,
-      stdio: ["inherit", "pipe", "pipe"]
-    });
+    const tempDir = join(tmpdir(), `foresight-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+    const logPath = join(tempDir, "runtime.log");
+    mkdirSync(tempDir, { recursive: true });
+    writeFileSync(logPath, "");
 
     let matches = 0;
-    let queue = Promise.resolve();
+    let lastSize = 0;
+    let buffer = "";
+    let pendingRead = Promise.resolve();
 
-    const processLine = (line, stream) => {
-      const finding = parseRuntimeDeprecation(line, {
-        source,
-        stream,
-        command
-      });
+    const processChunk = async (chunk) => {
+      buffer += chunk;
+      const lines = buffer.split(/\r?\n/);
+      buffer = lines.pop() || "";
 
-      if (!finding) {
-        return;
+      for (const line of lines) {
+        if (mirrorOutput) {
+          process.stdout.write(`${line}\n`);
+        }
+        const finding = parseRuntimeDeprecation(line, {
+          source,
+          stream: "combined",
+          command
+        });
+
+        if (!finding) {
+          continue;
+        }
+
+        matches += 1;
+        await onFinding(finding);
       }
-
-      matches += 1;
-      queue = queue.then(() => onFinding(finding));
     };
 
-    attachLineReader(child.stdout, "stdout", process.stdout, processLine);
-    attachLineReader(child.stderr, "stderr", process.stderr, processLine);
+    const consumeNewBytes = async () => {
+      const stream = createReadStream(logPath, {
+        start: lastSize,
+        encoding: "utf8"
+      });
 
-    child.on("error", reject);
+      for await (const chunk of stream) {
+        lastSize += Buffer.byteLength(chunk);
+        await processChunk(chunk);
+      }
+    };
+
+    const watcher = watchFile(logPath, { persistent: true }, () => {
+      pendingRead = pendingRead.then(() => consumeNewBytes());
+    });
+
+    const escapedLogPath = logPath.replace(/'/g, "'\\''");
+    const child = spawn("/bin/bash", ["-lc", `${command} > '${escapedLogPath}' 2>&1`], {
+      cwd: process.cwd(),
+      env: process.env,
+      stdio: ["inherit", "ignore", "ignore"]
+    });
+
+    child.on("error", (error) => {
+      watcher.close();
+      rmSync(tempDir, { recursive: true, force: true });
+      reject(error);
+    });
 
     child.on("close", async (exitCode) => {
-      await queue;
-      resolve({
-        exitCode: exitCode ?? 0,
-        matches
-      });
+      try {
+        await pendingRead;
+        await consumeNewBytes();
+
+        if (buffer) {
+          if (mirrorOutput) {
+            process.stdout.write(`${buffer}\n`);
+          }
+          const finding = parseRuntimeDeprecation(buffer, {
+            source,
+            stream: "combined",
+            command
+          });
+
+          if (finding) {
+            matches += 1;
+            await onFinding(finding);
+          }
+        }
+
+        watcher.close();
+        rmSync(tempDir, { recursive: true, force: true });
+        resolve({
+          exitCode: exitCode ?? 0,
+          matches
+        });
+      } catch (error) {
+        watcher.close();
+        rmSync(tempDir, { recursive: true, force: true });
+        reject(error);
+      }
     });
   });
 }
@@ -132,28 +203,5 @@ export async function scanFile({ filePath, follow = false, onFinding }) {
     process.once("SIGTERM", shutdown);
 
     watcher.on("error", reject);
-  });
-}
-
-function attachLineReader(stream, streamName, destination, onLine) {
-  let buffer = "";
-
-  stream.on("data", (chunk) => {
-    const text = chunk.toString("utf8");
-    destination.write(chunk);
-    buffer += text;
-
-    const lines = buffer.split(/\r?\n/);
-    buffer = lines.pop() || "";
-
-    for (const line of lines) {
-      onLine(line, streamName);
-    }
-  });
-
-  stream.on("end", () => {
-    if (buffer) {
-      onLine(buffer, streamName);
-    }
   });
 }

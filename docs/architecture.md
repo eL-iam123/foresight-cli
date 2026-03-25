@@ -18,7 +18,7 @@ Reporting + Slack/Email Alerts
 
 ## Runtime path
 
-1. `scan --cmd` spawns a child process and reads `stdout` and `stderr` line by line.
+1. `scan --cmd` runs a child process and captures its combined output for deprecation parsing.
 2. `scan --file` reads a log file and can keep following appended content in real time.
 3. Parsed deprecations are normalized and persisted immediately.
 4. New or severe records can trigger Slack and email notifications.
@@ -30,8 +30,8 @@ Reporting + Slack/Email Alerts
 - Subsequent sightings append an event and increment occurrence count.
 - Reports summarize current open records and recent history.
 
-## Commercial posture
+## Open-source posture
 
 - Tracking is stateful rather than ephemeral.
 - Alerting is built into the core data path.
-- The storage model supports future billing, tenancy, and dashboards without rewriting the scanner.
+- The codebase is kept small and modular so outside contributors can add parsers and tests without learning a large framework first.

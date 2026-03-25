@@ -1,3 +1,6 @@
+import { existsSync, readFileSync } from "node:fs";
+import { basename, resolve } from "node:path";
+
 const BOOLEAN_FLAGS = new Set([
   "follow",
   "json",
@@ -62,12 +65,23 @@ export function printUsage() {
   const lines = [
     "",
     "Foresight CLI",
+    "Track deprecations before they turn into breakage.",
     "",
-    "Usage:",
+    "Start here:",
+    "  foresight demo",
+    "  foresight deps",
+    "  foresight report",
+    "",
+    "Commands:",
+    "  foresight demo [--project my-app] [--json]",
     "  foresight scan --cmd \"npm test\" [--project my-app] [--db ./.foresight/foresight.db]",
     "  foresight scan --file ./logs/app.log [--follow] [--project my-app]",
     "  foresight deps [--package ./package.json] [--project my-app] [--notify]",
     "  foresight report [--project my-app] [--severity medium] [--type runtime] [--json]",
+    "",
+    "Tips:",
+    "  If you skip --project, Foresight uses your package.json name or folder name.",
+    "  Use `foresight demo` after install to make sure everything works.",
     "",
     "Alert env vars:",
     "  FORESIGHT_SLACK_WEBHOOK_URL",
@@ -87,7 +101,7 @@ export function printUsage() {
 }
 
 export function resolveProjectName(options) {
-  return options.project || process.env.FORESIGHT_PROJECT || "default-project";
+  return options.project || process.env.FORESIGHT_PROJECT || detectProjectName();
 }
 
 export function resolveDbPath(options) {
@@ -115,6 +129,28 @@ export function toNumber(value, defaultValue) {
   return Number.isFinite(parsed) ? parsed : defaultValue;
 }
 
+export function detectProjectName(baseDir = process.cwd()) {
+  const packageJsonPath = resolve(baseDir, "package.json");
+
+  if (existsSync(packageJsonPath)) {
+    try {
+      const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf8"));
+      if (packageJson.name) {
+        return stripScope(packageJson.name);
+      }
+    } catch {
+      // Fall back to the current folder name if package.json is unreadable.
+    }
+  }
+
+  return basename(baseDir);
+}
+
 function toCamelCase(value) {
   return value.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+}
+
+function stripScope(packageName) {
+  const parts = String(packageName).split("/");
+  return parts[parts.length - 1] || "project";
 }

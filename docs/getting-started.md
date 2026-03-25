@@ -1,28 +1,45 @@
 # Getting Started
 
-## Install
+## Install from npm
 
 ```bash
-npm install
-npm link
+npm install -g foresight-cli
 ```
 
-## First runtime scan
+## Run the demo first
+
+If you are brand new to the tool, start here:
 
 ```bash
-foresight scan --cmd "node ./test/fixtures/emit-warning.fixture.js" --project demo-app
+foresight demo
 ```
 
-## First dependency scan
+That command runs a built-in sample deprecation and stores it locally so you can see the full workflow.
+
+## Scan your own project
 
 ```bash
-foresight deps --project demo-app
+foresight scan --cmd "npm test"
 ```
 
-## View tracked results
+## Check dependencies
 
 ```bash
-foresight report --project demo-app --history-days 14
+foresight deps
+```
+
+## View the report
+
+```bash
+foresight report --history-days 14
+```
+
+## Use a custom project name
+
+Foresight uses your `package.json` name automatically. You can override it:
+
+```bash
+foresight scan --cmd "npm test" --project my-api
 ```
 
 ## Enable Slack alerts
@@ -31,7 +48,7 @@ foresight report --project demo-app --history-days 14
 export FORESIGHT_SLACK_WEBHOOK_URL="https://hooks.slack.com/services/..."
 export FORESIGHT_ALERT_THRESHOLD="medium"
 export FORESIGHT_ALERT_MODE="new"
-foresight scan --cmd "npm test" --project demo-app --notify
+foresight scan --cmd "npm test" --notify
 ```
 
 ## Enable email alerts
@@ -43,5 +60,5 @@ export FORESIGHT_SMTP_HOST="smtp.example.com"
 export FORESIGHT_SMTP_PORT="587"
 export FORESIGHT_SMTP_USER="smtp-user"
 export FORESIGHT_SMTP_PASS="smtp-pass"
-foresight deps --project demo-app --notify
+foresight deps --notify
 ```

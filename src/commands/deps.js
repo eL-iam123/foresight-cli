@@ -63,6 +63,9 @@ export async function runDepsCommand(options) {
     printJson(output);
   } else {
     process.stdout.write(
+      `Project: ${project}\nScanned dependencies: ${analysis.scannedCount}\nDeprecated packages: ${analysis.deprecatedCount}\n\n`
+    );
+    process.stdout.write(
       `${formatTable(
         [
           { key: "packageName", label: "Package" },
@@ -78,6 +81,12 @@ export async function runDepsCommand(options) {
         }))
       )}\n`
     );
+
+    if (captured.length === 0) {
+      process.stdout.write(
+        "\nNo deprecated packages were found in the scanned dependency set.\n"
+      );
+    }
   }
 
   const failOn = options.failOn || null;

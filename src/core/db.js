@@ -82,6 +82,7 @@ class SqliteClient {
   constructor(db, dbPath) {
     this.db = db;
     this.dbPath = dbPath;
+    this.inTransaction = false;
   }
 
   exec(sql, params = []) {
@@ -100,7 +101,9 @@ class SqliteClient {
 
   run(sql, params = []) {
     this.exec(sql, params);
-    this.persist();
+    if (!this.inTransaction) {
+      this.persist();
+    }
   }
 
   get(sql, params = []) {
@@ -125,11 +128,13 @@ class SqliteClient {
   }
 
   transaction(callback) {
+    this.inTransaction = true;
     this.db.run("BEGIN");
 
     try {
       const result = callback();
       this.db.run("COMMIT");
+      this.inTransaction = false;
       this.persist();
       return result;
     } catch (error) {
@@ -138,6 +143,7 @@ class SqliteClient {
       } catch {
         // Ignore rollback failures after the original error.
       }
+      this.inTransaction = false;
       throw error;
     }
   }
