@@ -28,21 +28,6 @@ foresight
 
 That opens the guided interactive menu and first-run onboarding.
 
-## Why this is not just Dependabot
-
-Dependabot is good at upgrade PRs and security patching.
-
-Foresight focuses on a different problem:
-
-- runtime deprecations that only appear when code actually runs
-- maintainer deprecation notices that need tracking, not just upgrades
-- historical backlog and triage, not only pull requests
-- prioritized next actions for cleanup work
-- Slack and email alerts outside a GitHub-only workflow
-
-Short version:
-
-> Dependabot tells you what can be upgraded. Foresight tells you what is starting to rot.
 
 ## The main workflow
 
