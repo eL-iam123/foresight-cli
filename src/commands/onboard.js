@@ -103,11 +103,16 @@ async function onboardLocalProject(prompt, defaultProject) {
     defaultValue: "",
     allowEmpty: true
   });
+  const notifySlackChannel = await prompt.text("Slack channel", {
+    defaultValue: "",
+    allowEmpty: true
+  });
 
   await runSubscribeCommand({
     project: defaultProject,
     includeDev,
-    email: notifyEmail || undefined
+    email: notifyEmail || undefined,
+    slackChannel: notifySlackChannel || undefined
   });
 
   return defaultProject;
@@ -128,6 +133,10 @@ async function onboardGitHubRepo(prompt) {
     defaultValue: "",
     allowEmpty: true
   });
+  const notifySlackChannel = await prompt.text("Slack channel", {
+    defaultValue: "",
+    allowEmpty: true
+  });
   const project = await prompt.text("Project name inside Foresight", {
     defaultValue: repo.split("/").pop() || "github-project",
     allowEmpty: true
@@ -139,7 +148,8 @@ async function onboardGitHubRepo(prompt) {
     branch,
     packageFile,
     includeDev,
-    email: notifyEmail || undefined
+    email: notifyEmail || undefined,
+    slackChannel: notifySlackChannel || undefined
   });
 
   process.stdout.write(
@@ -159,12 +169,17 @@ async function onboardSinglePackage(prompt, defaultProject) {
     defaultValue: "",
     allowEmpty: true
   });
+  const notifySlackChannel = await prompt.text("Slack channel", {
+    defaultValue: "",
+    allowEmpty: true
+  });
 
   await runSubscribeCommand({
     project: defaultProject,
     package: packageName,
     version: version === "latest" ? undefined : version,
-    email: notifyEmail || undefined
+    email: notifyEmail || undefined,
+    slackChannel: notifySlackChannel || undefined
   });
 
   return defaultProject;

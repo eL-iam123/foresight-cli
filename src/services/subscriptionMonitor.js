@@ -127,7 +127,8 @@ export async function runSubscriptionMonitor({
           const deliveries = await notifyFinding({
             deprecation: result.deprecation,
             isNew: result.isNew,
-            emailTo: subscription.notifyEmail || null
+            emailTo: subscription.notifyEmail || null,
+            slackChannel: subscription.metadata?.notifySlackChannel || null
           });
 
           if (deliveries.length > 0) {

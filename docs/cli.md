@@ -32,6 +32,7 @@ foresight subscribe --repo owner/repo
 foresight subscribe --repo vercel/next.js --branch canary
 foresight subscribe --package request --version 2.88.2
 foresight subscribe --package express --email you@example.com
+foresight subscribe --package express --email you@example.com --slack-channel alerts-dev
 ```
 
 Important options:
@@ -43,6 +44,7 @@ Important options:
 - `--package-file`
 - `--include-dev` / `--no-include-dev`
 - `--email`
+- `--slack-channel`
 - `--github-token`
 - `--project`
 - `--json`
@@ -51,6 +53,7 @@ Notes:
 
 - `--repo` treats GitHub as the source of truth and refreshes dependency versions from that repo on each monitor run.
 - Public repos work without auth. Private repos require `GITHUB_TOKEN`.
+- `--email` and `--slack-channel` are saved on the subscription so future monitor runs can alert the right person or team directly.
 
 ## `foresight subscriptions`
 
@@ -73,12 +76,14 @@ Examples:
 ```bash
 foresight monitor
 foresight monitor --notify
+foresight monitor --notify --email-to you@example.com --slack-channel alerts-dev
 foresight monitor --project api --json
 ```
 
 This command is intended to run from cron, CI, or another scheduler.
 
 If a subscription came from GitHub, `monitor` refreshes the repo's `package.json` before it checks npm for deprecations and new versions.
+If a subscription has a saved email or Slack channel, monitor sends alerts there directly.
 
 ## `foresight scan`
 
@@ -104,6 +109,8 @@ Important options:
 - `--project`
 - `--db`
 - `--notify`
+- `--email-to`
+- `--slack-channel`
 - `--alert-threshold`
 - `--alert-mode`
 - `--fail-on`

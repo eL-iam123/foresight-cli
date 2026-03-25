@@ -24,6 +24,7 @@ export async function runSubscribeCommand(options) {
   const store = new DeprecationStore(db);
   const project = resolveProjectName(options);
   const notifyEmail = options.email || null;
+  const notifySlackChannel = options.slackChannel || null;
   let subscriptionsToCreate = [];
 
   if (options.package) {
@@ -32,7 +33,8 @@ export async function runSubscribeCommand(options) {
         targetName: options.package,
         currentVersion: options.version || null,
         metadata: {
-          source: "manual"
+          source: "manual",
+          notifySlackChannel
         }
       }
     ];
@@ -59,7 +61,10 @@ export async function runSubscribeCommand(options) {
       targetName: subscription.targetName,
       currentVersion: subscription.currentVersion,
       notifyEmail,
-      metadata: subscription.metadata
+      metadata: {
+        ...subscription.metadata,
+        notifySlackChannel
+      }
     })
   );
 
@@ -89,6 +94,7 @@ export async function runSubscribeCommand(options) {
         { key: "source", label: "Source" },
         { key: "currentVersion", label: "Current Version" },
         { key: "notifyEmail", label: "Notify Email" },
+        { key: "notifySlack", label: "Slack Target" },
         { key: "state", label: "State" }
       ],
       output.items.map((item) => ({
@@ -99,6 +105,7 @@ export async function runSubscribeCommand(options) {
             : item.metadata?.source || "manual",
         currentVersion: item.currentVersion || "unknown",
         notifyEmail: item.notifyEmail || "env/default",
+        notifySlack: item.metadata?.notifySlackChannel || "env/default",
         state: item.isNew ? "created" : "updated"
       }))
     )}\n`

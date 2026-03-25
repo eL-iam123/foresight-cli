@@ -67,7 +67,8 @@ test("subscription monitor detects new versions and deprecations", async () => {
     currentVersion: "2.88.1",
     notifyEmail: "team@example.com",
     metadata: {
-      source: "manual"
+      source: "manual",
+      notifySlackChannel: "team-alerts"
     }
   });
 
@@ -80,10 +81,11 @@ test("subscription monitor detects new versions and deprecations", async () => {
       latestVersion: "2.88.2",
       deprecatedMessage: "request has been deprecated, use axios instead"
     }),
-    notifyFinding: async ({ deprecation, emailTo }) => {
+    notifyFinding: async ({ deprecation, emailTo, slackChannel }) => {
       deliveries.push({
         message: deprecation.message,
-        emailTo
+        emailTo,
+        slackChannel
       });
 
       return [
@@ -111,6 +113,10 @@ test("subscription monitor detects new versions and deprecations", async () => {
   assert.deepEqual(
     deliveries.map((delivery) => delivery.emailTo),
     ["team@example.com", "team@example.com"]
+  );
+  assert.deepEqual(
+    deliveries.map((delivery) => delivery.slackChannel),
+    ["team-alerts", "team-alerts"]
   );
 
   db.close();

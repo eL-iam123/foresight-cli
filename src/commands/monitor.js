@@ -43,11 +43,12 @@ export async function runMonitorCommand(options) {
     project: project || "all-projects",
     store,
     notifyFinding: notify
-      ? ({ deprecation, isNew, emailTo }) =>
+      ? ({ deprecation, isNew, emailTo, slackChannel }) =>
           alerts.notifyFinding({
             deprecation,
             isNew,
-            emailTo
+            emailTo,
+            slackChannel
           })
       : null
   });

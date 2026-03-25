@@ -6,10 +6,14 @@ export function createAlertDispatcher(options = {}) {
   const config = resolveAlertConfig(options);
 
   return {
-    enabled: Boolean(config.slackWebhookUrl || config.smtp.host),
-    async notifyFinding({ deprecation, isNew, emailTo }) {
+    enabled: Boolean(config.slack.webhookUrl || config.slack.botToken || config.smtp.host),
+    async notifyFinding({ deprecation, isNew, emailTo, slackChannel }) {
       const runtimeConfig = {
         ...config,
+        slack: {
+          ...config.slack,
+          channel: slackChannel || config.slack.channel
+        },
         email: {
           ...config.email,
           to: emailTo ? splitList(emailTo) : config.email.to
@@ -21,8 +25,10 @@ export function createAlertDispatcher(options = {}) {
       }
 
       const deliveries = [];
-      if (runtimeConfig.slackWebhookUrl) {
-        deliveries.push(sendSlackAlert(runtimeConfig, deprecation, isNew));
+      if (runtimeConfig.slack.botToken && runtimeConfig.slack.channel) {
+        deliveries.push(sendSlackChannelAlert(runtimeConfig, deprecation, isNew));
+      } else if (runtimeConfig.slack.webhookUrl) {
+        deliveries.push(sendSlackWebhookAlert(runtimeConfig, deprecation, isNew));
       }
 
       if (runtimeConfig.smtp.host && runtimeConfig.email.to.length > 0) {
@@ -39,8 +45,14 @@ function resolveAlertConfig(options) {
     mode: options.alertMode || process.env.FORESIGHT_ALERT_MODE || "new",
     threshold:
       options.alertThreshold || process.env.FORESIGHT_ALERT_THRESHOLD || "high",
-    slackWebhookUrl:
-      options.slackWebhook || process.env.FORESIGHT_SLACK_WEBHOOK_URL || "",
+    slack: {
+      webhookUrl:
+        options.slackWebhook || process.env.FORESIGHT_SLACK_WEBHOOK_URL || "",
+      botToken:
+        options.slackBotToken || process.env.FORESIGHT_SLACK_BOT_TOKEN || "",
+      channel:
+        options.slackChannel || process.env.FORESIGHT_SLACK_CHANNEL || ""
+    },
     email: {
       to: splitList(options.emailTo || process.env.FORESIGHT_EMAIL_TO),
       from:
@@ -48,6 +60,8 @@ function resolveAlertConfig(options) {
         process.env.FORESIGHT_EMAIL_FROM ||
         "foresight@localhost"
     },
+    fetchImpl: options.fetchImpl || globalThis.fetch,
+    transportFactory: options.transportFactory || nodemailer.createTransport,
     smtp: {
       host: options.smtpHost || process.env.FORESIGHT_SMTP_HOST || "",
       port: Number(options.smtpPort || process.env.FORESIGHT_SMTP_PORT || 587),
@@ -81,17 +95,18 @@ function shouldSendAlert(config, severity, isNew) {
   return isNew;
 }
 
-async function sendSlackAlert(config, deprecation, isNew) {
+async function sendSlackWebhookAlert(config, deprecation, isNew) {
   const payload = {
     text: renderAlertHeadline(deprecation, isNew),
     blocks: [
       sectionBlock(renderAlertHeadline(deprecation, isNew)),
       sectionBlock(renderAlertBody(deprecation))
-    ]
+    ],
+    ...(config.slack.channel ? { channel: config.slack.channel } : {})
   };
 
   try {
-    const response = await fetch(config.slackWebhookUrl, {
+    const response = await config.fetchImpl(config.slack.webhookUrl, {
       method: "POST",
       headers: {
         "content-type": "application/json"
@@ -125,8 +140,54 @@ async function sendSlackAlert(config, deprecation, isNew) {
   }
 }
 
+async function sendSlackChannelAlert(config, deprecation, isNew) {
+  const payload = {
+    channel: config.slack.channel,
+    text: renderAlertHeadline(deprecation, isNew),
+    blocks: [
+      sectionBlock(renderAlertHeadline(deprecation, isNew)),
+      sectionBlock(renderAlertBody(deprecation))
+    ]
+  };
+
+  try {
+    const response = await config.fetchImpl("https://slack.com/api/chat.postMessage", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${config.slack.botToken}`,
+        "content-type": "application/json; charset=utf-8"
+      },
+      body: JSON.stringify(payload)
+    });
+    const body = await response.json();
+
+    if (!response.ok || body.ok === false) {
+      return {
+        channel: "slack",
+        status: "failed",
+        errorMessage: `Slack API rejected alert${body.error ? ` (${body.error})` : ""}`,
+        payload
+      };
+    }
+
+    return {
+      channel: "slack",
+      status: "delivered",
+      deliveredAt: new Date().toISOString(),
+      payload
+    };
+  } catch (error) {
+    return {
+      channel: "slack",
+      status: "failed",
+      errorMessage: error.message,
+      payload
+    };
+  }
+}
+
 async function sendEmailAlert(config, deprecation, isNew) {
-  const transport = nodemailer.createTransport({
+  const transport = config.transportFactory({
     host: config.smtp.host,
     port: config.smtp.port,
     secure: config.smtp.secure,

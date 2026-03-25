@@ -138,6 +138,12 @@ Subscribe a single package:
 foresight subscribe --package request --version 2.88.2 --email you@example.com
 ```
 
+Subscribe a package and send alerts directly to a Slack channel too:
+
+```bash
+foresight subscribe --package request --version 2.88.2 --email you@example.com --slack-channel alerts-dev
+```
+
 List subscriptions:
 
 ```bash
@@ -221,12 +227,19 @@ export GITHUB_TOKEN="ghp_your_token"
 
 ## Alerts
 
-Slack:
+Slack webhook:
 
 ```bash
 export FORESIGHT_SLACK_WEBHOOK_URL="https://hooks.slack.com/services/..."
 export FORESIGHT_ALERT_THRESHOLD="medium"
 export FORESIGHT_ALERT_MODE="new"
+```
+
+Slack bot token plus direct channel delivery:
+
+```bash
+export FORESIGHT_SLACK_BOT_TOKEN="xoxb-your-bot-token"
+export FORESIGHT_SLACK_CHANNEL="alerts-dev"
 ```
 
 Email:
@@ -245,6 +258,8 @@ Then run:
 ```bash
 foresight monitor --notify
 ```
+
+If you save a subscription with `--email` or `--slack-channel`, `monitor --notify` uses those per-subscription targets directly.
 
 ## Open Source
 

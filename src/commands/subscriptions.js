@@ -33,7 +33,8 @@ export async function runSubscriptionsCommand(options) {
         { key: "currentVersion", label: "Current Version" },
         { key: "latestVersion", label: "Latest Known" },
         { key: "lastCheckedAt", label: "Last Checked" },
-        { key: "notifyEmail", label: "Notify Email" }
+        { key: "notifyEmail", label: "Notify Email" },
+        { key: "notifySlack", label: "Slack Target" }
       ],
       items.map((item) => ({
         targetName: item.targetName,
@@ -44,7 +45,8 @@ export async function runSubscriptionsCommand(options) {
         currentVersion: item.currentVersion || "unknown",
         latestVersion: item.latestVersion || "unknown",
         lastCheckedAt: formatTimestamp(item.lastCheckedAt),
-        notifyEmail: item.notifyEmail || "env/default"
+        notifyEmail: item.notifyEmail || "env/default",
+        notifySlack: item.metadata?.notifySlackChannel || "env/default"
       }))
     )}\n`
   );

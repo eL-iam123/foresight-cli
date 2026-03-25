@@ -77,6 +77,20 @@ export FORESIGHT_SMTP_PASS="smtp-pass"
 foresight monitor --notify
 ```
 
+## Send alerts directly to a Slack channel
+
+```bash
+export FORESIGHT_SLACK_BOT_TOKEN="xoxb-your-bot-token"
+export FORESIGHT_SLACK_CHANNEL="alerts-dev"
+foresight monitor --notify
+```
+
+You can also save a subscription-specific channel:
+
+```bash
+foresight subscribe --package request --email you@example.com --slack-channel alerts-dev
+```
+
 ## Schedule it and forget it
 
 ```bash
@@ -140,7 +154,7 @@ If you also want to capture deprecations from actual command output:
 foresight scan --cmd "npm test" --interactive
 ```
 
-## Enable Slack alerts
+## Enable Slack webhook alerts
 
 ```bash
 export FORESIGHT_SLACK_WEBHOOK_URL="https://hooks.slack.com/services/..."
