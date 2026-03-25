@@ -3,7 +3,11 @@ import assert from "node:assert/strict";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { detectProjectName, parseArgv } from "../src/core/cli.js";
+import {
+  detectProjectName,
+  parseArgv,
+  resolveProjectName
+} from "../src/core/cli.js";
 
 test("detectProjectName uses package name without npm scope", () => {
   const projectDir = mkdtempSync(join(tmpdir(), "foresight-project-"));
@@ -38,4 +42,8 @@ test("parseArgv recognizes interactive and watch flags", () => {
   assert.equal(parsed.options.interactive, true);
   assert.equal(parsed.options.watch, true);
   assert.equal(parsed.options.cmd, "npm test");
+});
+
+test("resolveProjectName falls back to the GitHub repo name", () => {
+  assert.equal(resolveProjectName({ repo: "el-iam213/foresight-cli" }), "foresight-cli");
 });

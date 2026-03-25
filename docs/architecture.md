@@ -5,9 +5,9 @@
 ```text
 CLI
  ↓
-Subscription Registry / Runtime Scanner / Dependency Analyzer
+Onboarding / Subscription Registry / Runtime Scanner / Dependency Analyzer
  ↓
-Registry Polling + Rule-based Parser Layer
+GitHub + package.json source loaders / Registry Polling + Rule-based Parser Layer
  ↓
 Normalization + Severity Scoring
  ↓
@@ -18,11 +18,20 @@ Reporting + Live Terminal UI + Slack/Email Alerts
 
 ## Subscription path
 
-1. `subscribe` saves a watchlist of packages from `package.json` or manual entries.
-2. `monitor` polls registry metadata for those subscriptions.
-3. Version changes or deprecation notices are normalized into tracked findings.
-4. New findings are persisted immediately.
-5. Slack and email alerts are sent when configured.
+1. `foresight` or `onboard` walks the user through first-run setup.
+2. `subscribe` saves a watchlist of packages from `package.json`, GitHub, or manual entries.
+3. `monitor` refreshes GitHub-backed subscriptions from the repo, then polls registry metadata.
+4. Version changes or deprecation notices are normalized into tracked findings.
+5. New findings are persisted immediately.
+6. Slack and email alerts are sent when configured.
+
+## GitHub-backed source sync
+
+1. A subscription can store `repo`, `branch`, and `packageFile` metadata.
+2. On each `monitor` run, Foresight fetches the latest manifest from GitHub.
+3. Current versions are updated from the repo before npm comparisons happen.
+4. Newly added dependencies are subscribed automatically.
+5. Dependencies removed from the repo are marked inactive locally.
 
 ## Runtime path
 

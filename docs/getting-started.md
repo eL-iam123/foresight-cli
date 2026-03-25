@@ -12,7 +12,13 @@ npm install -g foresight-cli
 foresight
 ```
 
-This is the easiest way to use the tool. It walks you through subscribe, monitor, report, and scan flows.
+This is the easiest way to use the tool. On first run it opens onboarding, then the guided menu for subscribe, monitor, report, and scan flows.
+
+## Run onboarding directly
+
+```bash
+foresight onboard
+```
 
 ## Subscribe once
 
@@ -23,6 +29,14 @@ foresight subscribe
 ```
 
 This reads `package.json` and saves the current dependency set as a watchlist.
+
+## Or subscribe a GitHub repo
+
+```bash
+foresight subscribe --repo owner/repo
+```
+
+This fetches the repo's `package.json`, saves its dependencies as subscriptions, and refreshes them from GitHub on future monitor runs.
 
 ## Run the monitor later
 
@@ -71,6 +85,15 @@ This is useful in a second terminal while another monitor or scan is running.
 
 ```bash
 foresight subscribe --package request --version 2.88.2 --email you@example.com
+```
+
+## Private GitHub repos
+
+Export a token if the repo is private or if you want higher rate limits:
+
+```bash
+export GITHUB_TOKEN="ghp_your_token"
+foresight subscribe --repo owner/private-repo
 ```
 
 ## Manual runtime scans still exist

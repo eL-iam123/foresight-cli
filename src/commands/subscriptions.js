@@ -29,6 +29,7 @@ export async function runSubscriptionsCommand(options) {
     `${formatTable(
       [
         { key: "targetName", label: "Target" },
+        { key: "source", label: "Source" },
         { key: "currentVersion", label: "Current Version" },
         { key: "latestVersion", label: "Latest Known" },
         { key: "lastCheckedAt", label: "Last Checked" },
@@ -36,6 +37,10 @@ export async function runSubscriptionsCommand(options) {
       ],
       items.map((item) => ({
         targetName: item.targetName,
+        source:
+          item.metadata?.source === "github"
+            ? `${item.metadata.repo}:${item.metadata.packageFile}`
+            : item.metadata?.source || "manual",
         currentVersion: item.currentVersion || "unknown",
         latestVersion: item.latestVersion || "unknown",
         lastCheckedAt: formatTimestamp(item.lastCheckedAt),

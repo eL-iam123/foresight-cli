@@ -30,7 +30,7 @@ export async function runMonitorCommand(options) {
       printJson(emptyOutput);
     } else {
       process.stdout.write(
-        `Project: ${emptyOutput.project}\nNo active subscriptions found. Run \`foresight subscribe\` first.\n`
+        `Project: ${emptyOutput.project}\nNo active subscriptions found. Run \`foresight\` or \`foresight onboard\` first.\n`
       );
     }
 

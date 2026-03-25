@@ -3,6 +3,7 @@ import { runDepsCommand } from "./commands/deps.js";
 import { runDemoCommand } from "./commands/demo.js";
 import { runInteractiveCommand } from "./commands/interactive.js";
 import { runMonitorCommand } from "./commands/monitor.js";
+import { runOnboardingCommand } from "./commands/onboard.js";
 import { runReportCommand } from "./commands/report.js";
 import { runScanCommand } from "./commands/scan.js";
 import { runSubscribeCommand } from "./commands/subscribe.js";
@@ -14,7 +15,7 @@ async function main() {
 
   if (!command) {
     if (process.stdout.isTTY && process.stdin.isTTY) {
-      await runInteractiveCommand();
+      await runInteractiveCommand(options);
       return;
     }
 
@@ -29,7 +30,10 @@ async function main() {
 
   switch (command) {
     case "interactive":
-      await runInteractiveCommand();
+      await runInteractiveCommand(options);
+      return;
+    case "onboard":
+      await runOnboardingCommand(options);
       return;
     case "demo":
       await runDemoCommand(options);

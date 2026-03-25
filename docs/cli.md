@@ -4,7 +4,13 @@
 
 Open the guided interactive menu.
 
-This is the recommended entrypoint for most users.
+This is the recommended entrypoint for most users. On a fresh setup it also launches onboarding automatically.
+
+## `foresight onboard`
+
+Run the guided onboarding flow directly.
+
+Use this if you want to set up a local project, a GitHub repo, or a single package without going through the full menu first.
 
 ## `foresight demo`
 
@@ -22,6 +28,8 @@ Examples:
 
 ```bash
 foresight subscribe
+foresight subscribe --repo owner/repo
+foresight subscribe --repo vercel/next.js --branch canary
 foresight subscribe --package request --version 2.88.2
 foresight subscribe --package express --email you@example.com
 ```
@@ -29,12 +37,20 @@ foresight subscribe --package express --email you@example.com
 Important options:
 
 - `--package`
+- `--repo`
+- `--branch`
 - `--version`
 - `--package-file`
 - `--include-dev` / `--no-include-dev`
 - `--email`
+- `--github-token`
 - `--project`
 - `--json`
+
+Notes:
+
+- `--repo` treats GitHub as the source of truth and refreshes dependency versions from that repo on each monitor run.
+- Public repos work without auth. Private repos require `GITHUB_TOKEN`.
 
 ## `foresight subscriptions`
 
@@ -61,6 +77,8 @@ foresight monitor --project api --json
 ```
 
 This command is intended to run from cron, CI, or another scheduler.
+
+If a subscription came from GitHub, `monitor` refreshes the repo's `package.json` before it checks npm for deprecations and new versions.
 
 ## `foresight scan`
 

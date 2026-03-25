@@ -467,6 +467,7 @@ export class DeprecationStore {
       `
         UPDATE subscriptions
         SET
+          current_version = COALESCE(?, current_version),
           latest_version = COALESCE(?, latest_version),
           last_checked_at = ?,
           updated_at = ?,
@@ -474,6 +475,7 @@ export class DeprecationStore {
         WHERE id = ?
       `,
       [
+        check.currentVersion || null,
         check.latestVersion || null,
         checkedAt,
         checkedAt,

@@ -16,6 +16,7 @@ Developers rarely remember to manually check whether libraries are being depreca
 
 - Enable setup-once monitoring instead of manual repeated checks.
 - Detect deprecated dependencies in Node.js projects.
+- Support GitHub repos as a live source of dependency truth.
 - Detect newer versions and notify users when a watchlist changes.
 - Normalize, persist, and query findings over time.
 - Alert teams through Slack and email with minimal operational overhead.
@@ -40,8 +41,15 @@ Developers rarely remember to manually check whether libraries are being depreca
 ### Subscription Monitor
 
 - Save watchlists from `package.json` or manual package entries.
+- Save watchlists from GitHub repos and refresh them during later monitor runs.
 - Poll the internet for deprecation notices and newer versions.
 - Notify users when something changes, without requiring them to remember to scan manually.
+
+### Onboarding
+
+- Open a guided first-run flow from `foresight` or `foresight onboard`.
+- Let beginners choose between a local project, a GitHub repo, or a single package.
+- Make the default workflow discoverable without requiring users to memorize flags.
 
 ### Runtime Scanner
 
@@ -77,9 +85,10 @@ Developers rarely remember to manually check whether libraries are being depreca
 ## MVP Scope
 
 - npm package subscription monitor
+- GitHub-backed subscription source
 - Node.js runtime parser
 - SQLite storage
-- CLI commands: `demo`, `subscribe`, `subscriptions`, `monitor`, `scan`, `deps`, `report`
+- CLI commands: `onboard`, `demo`, `subscribe`, `subscriptions`, `monitor`, `scan`, `deps`, `report`
 - Slack and email alert delivery
 
 ## Future Scope

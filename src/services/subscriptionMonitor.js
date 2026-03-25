@@ -11,50 +11,83 @@ export function loadPackageSubscriptions({
 }) {
   const absolutePackageFile = resolve(rootDir, packageFile);
   const packageJson = JSON.parse(readFileSync(absolutePackageFile, "utf8"));
-  const entries = [];
-
-  for (const [name, version] of Object.entries(packageJson.dependencies || {})) {
-    entries.push({
-      targetName: name,
-      currentVersion: version,
-      metadata: {
-        source: "package.json",
-        dependencyType: "dependencies",
-        packageFile: absolutePackageFile
-      }
-    });
-  }
-
-  if (includeDev) {
-    for (const [name, version] of Object.entries(packageJson.devDependencies || {})) {
-      entries.push({
-        targetName: name,
-        currentVersion: version,
-        metadata: {
-          source: "package.json",
-          dependencyType: "devDependencies",
-          packageFile: absolutePackageFile
-        }
-      });
+  return createSubscriptionsFromPackageJson(packageJson, {
+    includeDev,
+    metadata: {
+      source: "package.json",
+      packageFile: absolutePackageFile,
+      includeDev
     }
+  });
+}
+
+export async function loadGitHubSubscriptions({
+  repo,
+  branch = "main",
+  packageFile = "package.json",
+  includeDev = true,
+  githubToken = process.env.GITHUB_TOKEN || null,
+  fetchImpl = globalThis.fetch
+}) {
+  if (!repo) {
+    throw new Error("GitHub repo is required");
   }
 
-  return entries;
+  const packageJson = await fetchGitHubPackageJson({
+    repo,
+    branch,
+    packageFile,
+    githubToken,
+    fetchImpl
+  });
+
+  return createSubscriptionsFromPackageJson(packageJson, {
+    includeDev,
+    metadata: {
+      source: "github",
+      repo,
+      branch,
+      packageFile: normalizePackageFile(packageFile),
+      includeDev
+    }
+  });
 }
 
 export async function runSubscriptionMonitor({
   subscriptions,
   store,
   lookupPackageStatus = lookupNpmPackageStatus,
+  loadSourceSubscriptions = loadGitHubSubscriptions,
   notifyFinding,
   now = () => new Date().toISOString()
 }) {
+  const sourceSync = await synchronizeSourceSubscriptions({
+    subscriptions,
+    store,
+    loadSourceSubscriptions,
+    now
+  });
   const findings = [];
-  let checked = 0;
+  let checked = sourceSync.failedChecks.length;
   let changed = 0;
   let alertsAttempted = 0;
 
-  for (const subscription of subscriptions) {
+  for (const failedCheck of sourceSync.failedChecks) {
+    store.recordSubscriptionCheck({
+      subscriptionId: failedCheck.subscription.id,
+      checkedAt: failedCheck.checkedAt,
+      currentVersion: failedCheck.subscription.currentVersion || null,
+      status: "failed",
+      latestVersion: failedCheck.subscription.latestVersion || null,
+      deprecationMessage: null,
+      changeSummary: failedCheck.errorMessage,
+      payload: {
+        error: failedCheck.errorMessage
+      }
+    });
+  }
+
+  for (const subscription of sourceSync.subscriptions) {
     checked += 1;
     const checkedAt = now();
 
@@ -114,6 +147,7 @@ export async function runSubscriptionMonitor({
       store.recordSubscriptionCheck({
         subscriptionId: subscription.id,
         checkedAt,
+        currentVersion: subscription.currentVersion || null,
         status: detectedFindings.length > 0 ? "changed" : "ok",
         latestVersion: status.latestVersion || null,
         deprecationMessage: status.deprecatedMessage || null,
@@ -128,6 +162,7 @@ export async function runSubscriptionMonitor({
       store.recordSubscriptionCheck({
         subscriptionId: subscription.id,
         checkedAt,
+        currentVersion: subscription.currentVersion || null,
         status: "failed",
         latestVersion: null,
         deprecationMessage: null,
@@ -145,6 +180,124 @@ export async function runSubscriptionMonitor({
     alertsAttempted,
     findings
   };
+}
+
+async function synchronizeSourceSubscriptions({
+  subscriptions,
+  store,
+  loadSourceSubscriptions,
+  now
+}) {
+  const activeSubscriptions = [];
+  const failedChecks = [];
+  const githubGroups = new Map();
+
+  for (const subscription of subscriptions) {
+    if (isGitHubSubscription(subscription)) {
+      const key = getGitHubGroupKey(subscription);
+      const group = githubGroups.get(key) || {
+        project: subscription.project,
+        repo: subscription.metadata.repo,
+        branch: subscription.metadata.branch || "main",
+        packageFile: subscription.metadata.packageFile || "package.json",
+        includeDev: subscription.metadata.includeDev !== false,
+        subscriptions: []
+      };
+      group.subscriptions.push(subscription);
+      githubGroups.set(key, group);
+      continue;
+    }
+
+    activeSubscriptions.push(subscription);
+  }
+
+  for (const group of githubGroups.values()) {
+    try {
+      const latestEntries = await loadSourceSubscriptions({
+        repo: group.repo,
+        branch: group.branch,
+        packageFile: group.packageFile,
+        includeDev: group.includeDev
+      });
+      const nextSubscriptions = syncGitHubGroup({
+        group,
+        latestEntries,
+        store
+      });
+
+      activeSubscriptions.push(...nextSubscriptions);
+    } catch (error) {
+      const checkedAt = now();
+
+      for (const subscription of group.subscriptions) {
+        failedChecks.push({
+          subscription,
+          checkedAt,
+          errorMessage: error.message
+        });
+      }
+    }
+  }
+
+  return {
+    subscriptions: activeSubscriptions,
+    failedChecks
+  };
+}
+
+function syncGitHubGroup({ group, latestEntries, store }) {
+  const nextSubscriptions = [];
+  const currentByTarget = new Map(
+    group.subscriptions.map((subscription) => [subscription.targetName, subscription])
+  );
+  const latestByTarget = new Map();
+  const defaultNotifyEmail =
+    group.subscriptions.find((subscription) => subscription.notifyEmail)?.notifyEmail ||
+    null;
+
+  for (const entry of latestEntries) {
+    latestByTarget.set(entry.targetName, entry);
+
+    const existing = currentByTarget.get(entry.targetName);
+    const result = store.upsertSubscription({
+      project: group.project,
+      targetType: "npm-package",
+      targetName: entry.targetName,
+      currentVersion: entry.currentVersion,
+      latestVersion: existing?.latestVersion || null,
+      notifyEmail: existing?.notifyEmail || defaultNotifyEmail,
+      active: true,
+      metadata: {
+        ...(existing?.metadata || {}),
+        missingFromSource: false,
+        ...entry.metadata
+      }
+    });
+
+    nextSubscriptions.push(result.subscription);
+  }
+
+  for (const existing of group.subscriptions) {
+    if (latestByTarget.has(existing.targetName)) {
+      continue;
+    }
+
+    store.upsertSubscription({
+      project: existing.project,
+      targetType: existing.targetType,
+      targetName: existing.targetName,
+      currentVersion: existing.currentVersion,
+      latestVersion: existing.latestVersion,
+      notifyEmail: existing.notifyEmail,
+      active: false,
+      metadata: {
+        ...(existing.metadata || {}),
+        missingFromSource: true
+      }
+    });
+  }
+
+  return nextSubscriptions;
 }
 
 export function lookupNpmPackageStatus(packageName) {
@@ -235,4 +388,113 @@ function createFindingsFromStatus({ subscription, status }) {
   }
 
   return findings;
+}
+
+function createSubscriptionsFromPackageJson(packageJson, { includeDev, metadata }) {
+  const entries = new Map();
+
+  addDependencyEntries(entries, packageJson.dependencies, "dependencies", metadata);
+
+  if (includeDev) {
+    addDependencyEntries(
+      entries,
+      packageJson.devDependencies,
+      "devDependencies",
+      metadata
+    );
+  }
+
+  return [...entries.values()];
+}
+
+function addDependencyEntries(entries, dependencies, dependencyType, metadata) {
+  for (const [name, version] of Object.entries(dependencies || {})) {
+    if (entries.has(name)) {
+      continue;
+    }
+
+    entries.set(name, {
+      targetName: name,
+      currentVersion: version,
+      metadata: {
+        ...metadata,
+        dependencyType,
+        includeDev: metadata.includeDev !== false
+      }
+    });
+  }
+}
+
+async function fetchGitHubPackageJson({
+  repo,
+  branch,
+  packageFile,
+  githubToken,
+  fetchImpl
+}) {
+  if (typeof fetchImpl !== "function") {
+    throw new Error("Global fetch is unavailable in this runtime");
+  }
+
+  const normalizedPackageFile = normalizePackageFile(packageFile);
+
+  if (githubToken) {
+    const response = await fetchImpl(
+      `https://api.github.com/repos/${repo}/contents/${normalizedPackageFile}?ref=${encodeURIComponent(
+        branch
+      )}`,
+      {
+        headers: {
+          Accept: "application/vnd.github+json",
+          Authorization: `Bearer ${githubToken}`,
+          "User-Agent": "foresight-cli"
+        }
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        `GitHub request failed for ${repo}: ${response.status} ${response.statusText}`
+      );
+    }
+
+    const payload = await response.json();
+
+    if (!payload.content) {
+      throw new Error(`GitHub did not return ${normalizedPackageFile} for ${repo}`);
+    }
+
+    return JSON.parse(
+      Buffer.from(payload.content, payload.encoding || "base64").toString("utf8")
+    );
+  }
+
+  const response = await fetchImpl(
+    `https://raw.githubusercontent.com/${repo}/${encodeURIComponent(branch)}/${normalizedPackageFile}`
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      `GitHub request failed for ${repo}: ${response.status} ${response.statusText}`
+    );
+  }
+
+  return JSON.parse(await response.text());
+}
+
+function isGitHubSubscription(subscription) {
+  return subscription.metadata?.source === "github" && subscription.metadata?.repo;
+}
+
+function getGitHubGroupKey(subscription) {
+  return [
+    subscription.project,
+    subscription.metadata.repo,
+    subscription.metadata.branch || "main",
+    subscription.metadata.packageFile || "package.json"
+  ].join("|");
+}
+
+function normalizePackageFile(packageFile) {
+  return String(packageFile || "package.json").replace(/^\.?\//, "");
 }

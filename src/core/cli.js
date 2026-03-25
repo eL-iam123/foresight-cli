@@ -68,15 +68,17 @@ export function printUsage() {
   const lines = [
     "",
     "Foresight CLI",
-    "Subscribe once and get notified later about deprecations and new versions.",
+    "Subscribe once and get notified later about deprecations, repo changes, and new versions.",
     "",
     "Recommended:",
     "  foresight",
     "",
-    "This opens the guided interactive menu.",
+    "This opens the guided interactive menu and first-run onboarding.",
     "",
     "Quick commands:",
+    "  foresight onboard",
     "  foresight subscribe",
+    "  foresight subscribe --repo owner/repo",
     "  foresight monitor --notify",
     "  foresight subscriptions",
     "  foresight report",
@@ -85,9 +87,10 @@ export function printUsage() {
     "Power user commands:",
     "  foresight interactive",
     "  foresight subscribe --package request --version 2.88.2 --email you@example.com",
+    "  foresight subscribe --repo vercel/next.js --branch canary",
     "  foresight watch --interval 2",
     "",
-    "Alert env vars:",
+    "Env vars:",
     "  FORESIGHT_SLACK_WEBHOOK_URL",
     "  FORESIGHT_EMAIL_TO",
     "  FORESIGHT_EMAIL_FROM",
@@ -98,6 +101,7 @@ export function printUsage() {
     "  FORESIGHT_SMTP_SECURE",
     "  FORESIGHT_ALERT_THRESHOLD",
     "  FORESIGHT_ALERT_MODE",
+    "  GITHUB_TOKEN",
     ""
   ];
 
@@ -105,7 +109,12 @@ export function printUsage() {
 }
 
 export function resolveProjectName(options) {
-  return options.project || process.env.FORESIGHT_PROJECT || detectProjectName();
+  return (
+    options.project ||
+    projectNameFromRepo(options.repo) ||
+    process.env.FORESIGHT_PROJECT ||
+    detectProjectName()
+  );
 }
 
 export function resolveDbPath(options) {
@@ -157,4 +166,13 @@ function toCamelCase(value) {
 function stripScope(packageName) {
   const parts = String(packageName).split("/");
   return parts[parts.length - 1] || "project";
+}
+
+function projectNameFromRepo(repo) {
+  if (!repo) {
+    return null;
+  }
+
+  const parts = String(repo).split("/");
+  return parts[parts.length - 1] || null;
 }

@@ -1,79 +1,128 @@
 import { runDemoCommand } from "./demo.js";
 import { runMonitorCommand } from "./monitor.js";
+import { runOnboardingCommand, shouldRunOnboarding } from "./onboard.js";
 import { runReportCommand } from "./report.js";
 import { runScanCommand } from "./scan.js";
 import { runSubscribeCommand } from "./subscribe.js";
 import { runSubscriptionsCommand } from "./subscriptions.js";
-import { detectProjectName } from "../core/cli.js";
+import { detectProjectName, resolveProjectName } from "../core/cli.js";
 import { createPromptSession } from "../core/prompt.js";
 
-export async function runInteractiveCommand() {
+export async function runInteractiveCommand(options = {}) {
   const prompt = createPromptSession();
-  const defaultProject = detectProjectName();
+  let activeProject = resolveProjectName(options) || detectProjectName();
 
   try {
+    if (await shouldRunOnboarding({ ...options, project: activeProject })) {
+      const onboardedProject = await runOnboardingCommand(
+        { ...options, project: activeProject },
+        { prompt }
+      );
+
+      if (onboardedProject) {
+        activeProject = onboardedProject;
+        await prompt.pause();
+      }
+    }
+
     let shouldExit = false;
 
     while (!shouldExit) {
-      renderHeader(defaultProject);
-
-      const action = await prompt.select("What do you want to do?", [
+      const action = await prompt.select(
+        "What do you want to do?",
+        [
+          {
+            label: `Subscribe this project (${activeProject})`,
+            value: "subscribe-project",
+            description: "Read the local package.json and save its current dependency watchlist."
+          },
+          {
+            label: "Connect a GitHub repo",
+            value: "subscribe-github",
+            description: "Track a repo's package.json so monitor runs follow the codebase over time."
+          },
+          {
+            label: "Subscribe one package",
+            value: "subscribe-package",
+            description: "Watch a single npm package by name."
+          },
+          {
+            label: "Run onboarding again",
+            value: "onboard",
+            description: "Walk through setup from scratch."
+          },
+          {
+            label: "Check for changes now",
+            value: "monitor",
+            description: "Run a monitor pass immediately."
+          },
+          {
+            label: "View subscriptions",
+            value: "subscriptions",
+            description: "Show saved watchlists and their sources."
+          },
+          {
+            label: "View report",
+            value: "report",
+            description: "See tracked findings and history."
+          },
+          {
+            label: "Run a live runtime scan",
+            value: "scan",
+            description: "Capture deprecations from command output or log files."
+          },
+          {
+            label: "Run demo",
+            value: "demo",
+            description: "Populate the database with a sample warning."
+          },
+          {
+            label: "Exit",
+            value: "exit",
+            description: "Leave the interactive menu."
+          }
+        ],
         {
-          label: `Subscribe this project (${defaultProject})`,
-          value: "subscribe-project"
-        },
-        {
-          label: "Subscribe one package",
-          value: "subscribe-package"
-        },
-        {
-          label: "Check for changes now",
-          value: "monitor"
-        },
-        {
-          label: "View subscriptions",
-          value: "subscriptions"
-        },
-        {
-          label: "View report",
-          value: "report"
-        },
-        {
-          label: "Run a live runtime scan",
-          value: "scan"
-        },
-        {
-          label: "Run demo",
-          value: "demo"
-        },
-        {
-          label: "Exit",
-          value: "exit"
+          helpText: `Current project: ${activeProject}`
         }
-      ]);
+      );
 
       stdoutBreak();
 
       switch (action) {
         case "subscribe-project":
-          await handleSubscribeProject(prompt, defaultProject);
+          await handleSubscribeProject(prompt, activeProject);
+          break;
+        case "subscribe-github":
+          activeProject = await handleSubscribeGitHub(prompt);
           break;
         case "subscribe-package":
-          await handleSubscribePackage(prompt, defaultProject);
+          await handleSubscribePackage(prompt, activeProject);
           break;
+        case "onboard": {
+          const onboardedProject = await runOnboardingCommand(
+            { ...options, project: activeProject },
+            { prompt }
+          );
+
+          if (onboardedProject) {
+            activeProject = onboardedProject;
+          }
+          break;
+        }
         case "monitor":
-          await handleMonitor(prompt, defaultProject);
+          await handleMonitor(prompt, activeProject);
           break;
         case "subscriptions":
           await runSubscriptionsCommand({
-            project: defaultProject
+            project: activeProject
           });
           break;
         case "report":
-          await handleReport(prompt, defaultProject);
+          await handleReport(prompt, activeProject);
           break;
         case "scan":
-          await handleScan(prompt, defaultProject);
+          await handleScan(prompt, activeProject);
           break;
         case "demo":
           await runDemoCommand({
@@ -97,7 +146,7 @@ export async function runInteractiveCommand() {
   }
 }
 
-async function handleSubscribeProject(prompt, defaultProject) {
+async function handleSubscribeProject(prompt, project) {
   const includeDev = await prompt.confirm("Include devDependencies?", true);
   const notifyEmail = await prompt.text("Notification email", {
     defaultValue: "",
@@ -105,13 +154,49 @@ async function handleSubscribeProject(prompt, defaultProject) {
   });
 
   await runSubscribeCommand({
-    project: defaultProject,
+    project,
     includeDev,
     email: notifyEmail || undefined
   });
 }
 
-async function handleSubscribePackage(prompt, defaultProject) {
+async function handleSubscribeGitHub(prompt) {
+  const repo = await prompt.text("GitHub repo (owner/repo)");
+  const branch = await prompt.text("Branch", {
+    defaultValue: "main",
+    allowEmpty: true
+  });
+  const packageFile = await prompt.text("package.json path in the repo", {
+    defaultValue: "package.json",
+    allowEmpty: true
+  });
+  const includeDev = await prompt.confirm("Include devDependencies?", true);
+  const notifyEmail = await prompt.text("Notification email", {
+    defaultValue: "",
+    allowEmpty: true
+  });
+  const project = await prompt.text("Project name inside Foresight", {
+    defaultValue: repo.split("/").pop() || "github-project",
+    allowEmpty: true
+  });
+
+  await runSubscribeCommand({
+    project,
+    repo,
+    branch,
+    packageFile,
+    includeDev,
+    email: notifyEmail || undefined
+  });
+
+  process.stdout.write(
+    "\nTip: export `GITHUB_TOKEN` if you want private repo access or higher GitHub API limits.\n"
+  );
+
+  return project;
+}
+
+async function handleSubscribePackage(prompt, project) {
   const packageName = await prompt.text("Package name");
   const version = await prompt.text("Current version", {
     defaultValue: "latest",
@@ -123,40 +208,42 @@ async function handleSubscribePackage(prompt, defaultProject) {
   });
 
   await runSubscribeCommand({
-    project: defaultProject,
+    project,
     package: packageName,
     version: version === "latest" ? undefined : version,
     email: notifyEmail || undefined
   });
 }
 
-async function handleMonitor(prompt, defaultProject) {
+async function handleMonitor(prompt, project) {
   const notify = await prompt.confirm("Send alerts if something changed?", true);
   await runMonitorCommand({
-    project: defaultProject,
+    project,
     notify
   });
 }
 
-async function handleReport(prompt, defaultProject) {
+async function handleReport(prompt, project) {
   const live = await prompt.confirm("Open live report view?", false);
 
   await runReportCommand({
-    project: defaultProject,
+    project,
     watch: live,
     interval: live ? 2 : undefined
   });
 }
 
-async function handleScan(prompt, defaultProject) {
+async function handleScan(prompt, project) {
   const source = await prompt.select("What do you want to scan?", [
     {
       label: "Run a command and watch its output",
-      value: "command"
+      value: "command",
+      description: "Launch a local command and capture deprecations as they appear."
     },
     {
       label: "Follow a log file",
-      value: "file"
+      value: "file",
+      description: "Tail a file and parse deprecations continuously."
     }
   ]);
 
@@ -166,7 +253,7 @@ async function handleScan(prompt, defaultProject) {
     });
 
     await runScanCommand({
-      project: defaultProject,
+      project,
       cmd: command,
       interactive: true
     });
@@ -177,19 +264,11 @@ async function handleScan(prompt, defaultProject) {
   const follow = await prompt.confirm("Follow the file for live updates?", true);
 
   await runScanCommand({
-    project: defaultProject,
+    project,
     file: filePath,
     follow,
     interactive: true
   });
-}
-
-function renderHeader(project) {
-  process.stdout.write("\x1b[2J\x1b[H");
-  process.stdout.write("Foresight CLI\n");
-  process.stdout.write("Setup once and monitor package changes over time.\n\n");
-  process.stdout.write(`Current project: ${project}\n`);
-  process.stdout.write("Use the menu below instead of memorizing flags.\n");
 }
 
 function stdoutBreak() {
